@@ -36,13 +36,14 @@ export function Board({
   }, [canDraw]);
 
   if (!game) return null;
+  const board: GameState = game;
 
   const colors = new Map(room.players.map((p) => [p.id, p.color]));
-  const size = game.size;
+  const size = board.size;
   const dots = size + 1;
   const width = PAD * 2 + size * CELL;
   const height = width;
-  const targets = selected ? freeNeighbors(game, selected) : [];
+  const targets = selected ? freeNeighbors(board, selected) : [];
 
   function toLocal(clientX: number, clientY: number) {
     const el = wrapRef.current;
@@ -127,13 +128,13 @@ export function Board({
     }
     if (selected) {
       const edge = edgeBetween(selected, point);
-      if (edge && !isDrawn(game, edge)) {
+      if (edge && !isDrawn(board, edge)) {
         onDraw(edge);
         setSelected(null);
         return;
       }
     }
-    if (freeNeighbors(game, point).length > 0) setSelected(point);
+    if (freeNeighbors(board, point).length > 0) setSelected(point);
   }
 
   return (
@@ -154,7 +155,7 @@ export function Board({
           transformOrigin: "0 0",
         }}
       >
-        {game.owners.map((row, r) =>
+        {board.owners.map((row, r) =>
           row.map((owner, c) => {
             if (!owner) return null;
             const color = COLOR_HEX[(colors.get(owner) ?? "red") as ColorId];
@@ -171,7 +172,7 @@ export function Board({
             );
           }),
         )}
-        {game.horizontal.map((row, r) =>
+        {board.horizontal.map((row, r) =>
           row.map((drawn, c) => (
             <line
               key={`h-${r}-${c}`}
@@ -185,7 +186,7 @@ export function Board({
             />
           )),
         )}
-        {game.vertical.map((row, r) =>
+        {board.vertical.map((row, r) =>
           row.map((drawn, c) => (
             <line
               key={`v-${r}-${c}`}

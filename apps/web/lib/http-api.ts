@@ -13,9 +13,9 @@ export async function handleRest(
     if (req.method === "POST" && pathname === "/api/rooms") {
       const body = await readJson(req);
       const result = await createRoom({
-        size: body.size,
-        nick: body.nick ?? "",
-        color: body.color ?? "",
+        size: asNumber(body.size),
+        nick: asString(body.nick),
+        color: asString(body.color),
       });
       return send(res, 201, result);
     }
@@ -29,8 +29,8 @@ export async function handleRest(
     if (req.method === "POST" && joinMatch) {
       const body = await readJson(req);
       const result = await joinRoom(decodeURIComponent(joinMatch[1]), {
-        nick: body.nick ?? "",
-        color: body.color ?? "",
+        nick: asString(body.nick),
+        color: asString(body.color),
       });
       return send(res, 200, result);
     }
@@ -38,7 +38,7 @@ export async function handleRest(
     const resumeMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/resume$/);
     if (req.method === "POST" && resumeMatch) {
       const body = await readJson(req);
-      const result = await resumeRoom(decodeURIComponent(resumeMatch[1]), body.seatToken ?? "");
+      const result = await resumeRoom(decodeURIComponent(resumeMatch[1]), asString(body.seatToken));
       return send(res, 200, result);
     }
 
@@ -47,6 +47,14 @@ export async function handleRest(
     const { body, status } = jsonError(error);
     return send(res, status, body);
   }
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
