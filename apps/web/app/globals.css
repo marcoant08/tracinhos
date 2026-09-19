@@ -1,0 +1,262 @@
+:root {
+  color-scheme: dark;
+  --bg: #1a1410;
+  --paper: #f4e8d4;
+  --ink: #2b2118;
+  --accent: #c45c26;
+  --accent-2: #e8a35c;
+  --muted: #c9b8a2;
+  --line: #3d3228;
+  --danger: #e06b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(1200px 600px at 20% -10%, #2a2018, var(--bg));
+  color: var(--paper);
+  font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+a {
+  color: var(--accent-2);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.page {
+  width: min(440px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  letter-spacing: -0.04em;
+}
+
+.brand p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.card {
+  background: #241c16;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 16px;
+  margin-bottom: 14px;
+}
+
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #1a1410;
+  color: var(--paper);
+  padding: 0 12px;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btn {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff7ee;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--paper);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin: 8px 0 0;
+}
+
+.colors {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.color {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.color[data-selected="true"] {
+  border-color: var(--paper);
+}
+
+.color:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.color:disabled::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  border-top: 2px solid #1a1410;
+  transform: rotate(45deg);
+}
+
+.hud {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(26, 20, 16, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 10px 0 12px;
+  margin: -8px -16px 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.turn {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.you {
+  color: var(--accent-2);
+}
+
+.score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #2a211b;
+  border-radius: 999px;
+  padding: 4px 10px 4px 6px;
+  font-size: 0.82rem;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.code {
+  font-size: 2rem;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  text-align: center;
+}
+
+.board-wrap {
+  height: min(72vh, 560px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--paper);
+  touch-action: none;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: #2b2118;
+  color: var(--paper);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  z-index: 20;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
