@@ -55,9 +55,11 @@ HUD fixo no topo (não rola com o tabuleiro):
 
 Abaixo, viewport do tabuleiro:
 
-- Área com overflow hidden, pan (arrastar com um dedo) e pinch-zoom (escala 0.6–3).
-- Pontos, traços vazios (hit-area larga) e traços feitos na cor de quem jogou? **Decisão:** traço feito em tinta escura; quadrado preenchido na cor do dono com opacidade ~0.45.
-- Toque numa aresta livre na sua vez envia `game:draw`.
+- Área com overflow hidden, pan (arrastar no vazio) e pinch-zoom (escala 0.6–3).
+- Pontos grandes o bastante para o polegar. Traço feito em tinta escura; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
+- **Dois toques:** origem pisca em acento (`#c45c26`); destinos livres piscam em teal (`#1f8a8a`). Sem destino livre, o ponto não vira origem.
+- Clique no segundo ponto válido envia `game:draw`. Traço já existente não é destino.
+- Fora da vez, sem seleção e pontos não reagem a toque de jogada.
 - Jogada ilegal ou fora da vez: toast curto, sem avançar.
 
 ### Finished

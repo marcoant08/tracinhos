@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
+import type { GameState } from "@tracinhos/game";
 import { COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
 
 const CELL = 56;
 const PAD = 28;
-const HIT = 22;
+const DOT_HIT = 24;
 
 type Edge = { orientation: "h" | "v"; row: number; col: number };
+type Point = { row: number; col: number };
 
 export function Board({
   room,
@@ -18,67 +20,55 @@ export function Board({
   canDraw: boolean;
   onDraw: (edge: Edge) => void;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const [selected, setSelected] = useState<Point | null>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(
+    null,
+  );
+
   const game = room.game;
+
+  useEffect(() => {
+    if (!canDraw) setSelected(null);
+  }, [canDraw]);
+
   if (!game) return null;
 
   const colors = new Map(room.players.map((p) => [p.id, p.color]));
   const size = game.size;
+  const dots = size + 1;
   const width = PAD * 2 + size * CELL;
   const height = width;
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<{ dist: number; scale: number } | null>(null);
-  const drag = useRef<{
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    moved: boolean;
-    edge: Edge | null;
-  } | null>(null);
+  const targets = selected ? freeNeighbors(game, selected) : [];
 
-  function edgeAt(clientX: number, clientY: number): Edge | null {
+  function toLocal(clientX: number, clientY: number) {
     const el = wrapRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const x = (clientX - rect.left - view.x) / view.scale;
-    const y = (clientY - rect.top - view.y) / view.scale;
-    let bestEdge: Edge | null = null;
-    let bestDist = Infinity;
-
-    const consider = (edge: Edge, cx: number, cy: number, hw: number, hh: number) => {
-      const dx = Math.max(Math.abs(x - cx) - hw, 0);
-      const dy = Math.max(Math.abs(y - cy) - hh, 0);
-      const dist = Math.hypot(dx, dy);
-      if (dist > HIT || dist >= bestDist) return;
-      bestEdge = edge;
-      bestDist = dist;
+    return {
+      x: (clientX - rect.left - view.x) / view.scale,
+      y: (clientY - rect.top - view.y) / view.scale,
     };
+  }
 
-    for (let row = 0; row <= size; row++) {
-      for (let col = 0; col < size; col++) {
-        consider(
-          { orientation: "h", row, col },
-          PAD + col * CELL + CELL / 2,
-          PAD + row * CELL,
-          CELL / 2,
-          HIT / 2,
-        );
+  function pointAt(clientX: number, clientY: number): Point | null {
+    const local = toLocal(clientX, clientY);
+    if (!local) return null;
+    let best: Point | null = null;
+    let bestDist = DOT_HIT;
+    for (let row = 0; row < dots; row++) {
+      for (let col = 0; col < dots; col++) {
+        const dist = Math.hypot(local.x - (PAD + col * CELL), local.y - (PAD + row * CELL));
+        if (dist < bestDist) {
+          best = { row, col };
+          bestDist = dist;
+        }
       }
     }
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col <= size; col++) {
-        consider(
-          { orientation: "v", row, col },
-          PAD + col * CELL,
-          PAD + row * CELL + CELL / 2,
-          HIT / 2,
-          CELL / 2,
-        );
-      }
-    }
-    return bestEdge;
+    return best;
   }
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -91,7 +81,6 @@ export function Board({
         vx: view.x,
         vy: view.y,
         moved: false,
-        edge: edgeAt(event.clientX, event.clientY),
       };
     }
   }
@@ -125,9 +114,26 @@ export function Board({
   }
 
   function onClick(event: { clientX: number; clientY: number }) {
-    if (drag.current?.moved) return;
-    const edge = edgeAt(event.clientX, event.clientY);
-    if (edge && canDraw) onDraw(edge);
+    if (!canDraw) return;
+    const point = pointAt(event.clientX, event.clientY);
+    if (drag.current?.moved && !point) return;
+    if (!point) {
+      setSelected(null);
+      return;
+    }
+    if (selected && samePoint(selected, point)) {
+      setSelected(null);
+      return;
+    }
+    if (selected) {
+      const edge = edgeBetween(selected, point);
+      if (edge && !isDrawn(game, edge)) {
+        onDraw(edge);
+        setSelected(null);
+        return;
+      }
+    }
+    if (freeNeighbors(game, point).length > 0) setSelected(point);
   }
 
   return (
@@ -173,10 +179,9 @@ export function Board({
               y1={PAD + r * CELL}
               x2={PAD + (c + 1) * CELL}
               y2={PAD + r * CELL}
-              stroke={drawn ? "#2b2118" : "#d8c8b0"}
-              strokeWidth={drawn ? 6 : 3}
+              stroke={drawn ? "#2b2118" : "#e6d7c2"}
+              strokeWidth={drawn ? 6 : 2}
               strokeLinecap="round"
-              aria-label={`traço horizontal linha ${r + 1} coluna ${c + 1}`}
             />
           )),
         )}
@@ -188,25 +193,65 @@ export function Board({
               y1={PAD + r * CELL}
               x2={PAD + c * CELL}
               y2={PAD + (r + 1) * CELL}
-              stroke={drawn ? "#2b2118" : "#d8c8b0"}
-              strokeWidth={drawn ? 6 : 3}
+              stroke={drawn ? "#2b2118" : "#e6d7c2"}
+              strokeWidth={drawn ? 6 : 2}
               strokeLinecap="round"
-              aria-label={`traço vertical linha ${r + 1} coluna ${c + 1}`}
             />
           )),
         )}
-        {Array.from({ length: size + 1 }, (_, r) =>
-          Array.from({ length: size + 1 }, (_, c) => (
-            <circle
-              key={`d-${r}-${c}`}
-              cx={PAD + c * CELL}
-              cy={PAD + r * CELL}
-              r={5}
-              fill="#2b2118"
-            />
-          )),
+        {Array.from({ length: dots }, (_, row) =>
+          Array.from({ length: dots }, (_, col) => {
+            const isSel = selected ? samePoint(selected, { row, col }) : false;
+            const isTarget = targets.some((p) => samePoint(p, { row, col }));
+            const kind = isSel ? "selected" : isTarget ? "target" : "idle";
+            return (
+              <circle
+                key={`d-${row}-${col}`}
+                className={`board-dot board-dot-${kind}`}
+                cx={PAD + col * CELL}
+                cy={PAD + row * CELL}
+                r={isSel || isTarget ? 9 : 6}
+                aria-label={`ponto linha ${row + 1} coluna ${col + 1}`}
+              />
+            );
+          }),
         )}
       </svg>
     </div>
   );
+}
+
+function samePoint(a: Point, b: Point) {
+  return a.row === b.row && a.col === b.col;
+}
+
+function isDrawn(game: GameState, edge: Edge) {
+  return edge.orientation === "h"
+    ? game.horizontal[edge.row][edge.col]
+    : game.vertical[edge.row][edge.col];
+}
+
+function edgeBetween(a: Point, b: Point): Edge | null {
+  if (a.row === b.row && Math.abs(a.col - b.col) === 1) {
+    return { orientation: "h", row: a.row, col: Math.min(a.col, b.col) };
+  }
+  if (a.col === b.col && Math.abs(a.row - b.row) === 1) {
+    return { orientation: "v", row: Math.min(a.row, b.row), col: a.col };
+  }
+  return null;
+}
+
+function freeNeighbors(game: GameState, point: Point): Point[] {
+  const last = game.size;
+  const candidates: Point[] = [
+    { row: point.row - 1, col: point.col },
+    { row: point.row + 1, col: point.col },
+    { row: point.row, col: point.col - 1 },
+    { row: point.row, col: point.col + 1 },
+  ];
+  return candidates.filter((next) => {
+    if (next.row < 0 || next.col < 0 || next.row > last || next.col > last) return false;
+    const edge = edgeBetween(point, next);
+    return edge !== null && !isDrawn(game, edge);
+  });
 }

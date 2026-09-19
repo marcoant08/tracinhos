@@ -190,6 +190,14 @@ select:focus {
   color: var(--accent-2);
 }
 
+.hint {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 .score {
   display: flex;
   flex-wrap: wrap;
@@ -259,4 +267,24 @@ select:focus {
   align-items: center;
   gap: 10px;
   min-height: 44px;
+}
+
+.board-dot-idle {
+  fill: #2b2118;
+}
+
+.board-dot-selected {
+  fill: #c45c26;
+  animation: blink-dot 0.7s ease-in-out infinite;
+}
+
+.board-dot-target {
+  fill: #1f8a8a;
+  animation: blink-dot 0.7s ease-in-out infinite;
+}
+
+@keyframes blink-dot {
+  50% {
+    opacity: 0.25;
+  }
 }

@@ -209,9 +209,9 @@ export async function startRoom(code: string, actorId: string): Promise<PublicRo
       room.size,
       room.players.map((p) => p.id),
     );
-    runBots(room);
     return {};
   });
+  queueBotTurns(code);
   return result.room;
 }
 
@@ -231,10 +231,10 @@ export async function drawEdge(
       if (codeName === "not_your_turn") throw new RoomError("not_your_turn");
       throw new RoomError("illegal_move");
     }
-    runBots(room);
     if (room.game.status === "finished") room.status = "finished";
     return {};
   });
+  queueBotTurns(code);
   return result.room;
 }
 
@@ -256,11 +256,8 @@ export async function markDisconnected(code: string, playerId: string): Promise<
 
 export async function sweepAndPlayBots(code: string): Promise<PublicRoom | null> {
   try {
-    const result = await mutate(code, async (room) => {
-      if (room.game && room.status === "playing") runBots(room);
-      if (room.game?.status === "finished") room.status = "finished";
-      return {};
-    });
+    const result = await mutate(code, async () => ({}));
+    queueBotTurns(code);
     return result.room;
   } catch (error) {
     if (error instanceof RoomError && error.code === "room_not_found") return null;
@@ -400,21 +397,41 @@ function sweep(room: Room): Room {
   return room;
 }
 
-function runBots(room: Room): void {
-  if (!room.game || room.game.status !== "playing") return;
-  room.game = playBotTurns(room.game, room.players);
+const BOT_TURN_MS = 750;
+const botTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function queueBotTurns(code: string) {
+  const normalized = normalizeCode(code);
+  if (botTimers.has(normalized)) return;
+  botTimers.set(
+    normalized,
+    setTimeout(() => {
+      botTimers.delete(normalized);
+      void playOneBotMove(normalized);
+    }, BOT_TURN_MS),
+  );
 }
 
-function playBotTurns(start: GameState, players: Seat[]): GameState {
-  let next = start;
-  for (let guard = 0; guard < 400 && next.status === "playing"; guard++) {
-    const index = next.currentPlayerIndex;
-    const currentId: string = next.playerIds[index] as string;
-    const player = players.find((p) => p.id === currentId);
-    if (!player || player.kind !== "bot") break;
-    next = applyMove(next, player.id, pickBotMove(next, Math.random)).state;
+async function playOneBotMove(code: string): Promise<void> {
+  try {
+    const result = await mutate(code, async (room) => {
+      if (room.status !== "playing" || !room.game || room.game.status !== "playing") {
+        return { again: false };
+      }
+      const currentId = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
+      const player = room.players.find((p) => p.id === currentId);
+      if (!player || player.kind !== "bot") return { again: false };
+      room.game = applyMove(room.game, player.id, pickBotMove(room.game, Math.random)).state;
+      if (room.game.status === "finished") room.status = "finished";
+      const nextId = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
+      const next = room.players.find((p) => p.id === nextId);
+      return { again: room.game.status === "playing" && next?.kind === "bot" };
+    });
+    if (result.again) queueBotTurns(code);
+  } catch (error) {
+    if (error instanceof RoomError && error.code === "room_not_found") return;
+    console.error(error);
   }
-  return next;
 }
 
 function sessionOf(seatToken: string, room: Room, playerId: string): Session {

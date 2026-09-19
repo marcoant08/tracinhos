@@ -209,7 +209,14 @@ export function RoomApp({ code }: { code: string }) {
             ) : (
               <>
                 <span className="dot" style={{ background: current ? COLOR_HEX[current.color] : "#888" }} />
-                {myTurn ? "Sua vez" : `Vez de ${current?.nick ?? "…"}`}
+                {myTurn ? (
+                  <span>
+                    Sua vez
+                    <small className="hint">Toque dois pontos vizinhos</small>
+                  </span>
+                ) : (
+                  `Vez de ${current?.nick ?? "…"}`
+                )}
               </>
             )}
           </div>

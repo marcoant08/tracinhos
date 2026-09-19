@@ -71,16 +71,22 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 
 ### 6. Jogar
 
-Na vez, o jogador desenha um traço horizontal ou vertical entre pontos vizinhos.
+Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
+
+1. Toca um ponto (origem). Esse ponto **pisca**.
+2. Os vizinhos imediatos **livres** (acima, abaixo, esquerda, direita — nunca diagonal) **piscam noutra cor**.
+3. Toca o segundo ponto. Só então o traço é enviado.
 
 **Aceite**
 
-- Traço já desenhado, diagonal, ou fora da grade: `illegal_move`.
-- Jogada fora da vez: `not_your_turn`.
+- Segundo ponto que não é vizinho imediato: não desenha; se o ponto clicado tiver vizinhos livres, passa a ser a nova origem.
+- Tocar de novo a origem cancela a seleção.
+- Traço já existente: esse par **não** aparece como destino e `game:draw` recusa `illegal_move`.
+- Jogada fora da vez: `not_your_turn`; a seleção some quando não é a sua vez.
 - Fechar 1 quadrado: marca com a cor do jogador, +1 ponto, mesma pessoa joga de novo.
 - Fechar 2 quadrados no mesmo traço: marca os dois, +2, **uma** jogada extra.
-- Sem fechar: a vez passa ao próximo (pulando quem não está na lista de turnos).
-- Bot na vez: o servidor joga automaticamente (guloso: fecha se puder; senão aleatório).
+- Sem fechar: a vez passa ao próximo.
+- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, com pausa visível (~0,75s) para o HUD mostrar de quem é a vez. Guloso: fecha se puder; senão aleatório.
 
 ### 7. Fim
 
