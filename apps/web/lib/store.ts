@@ -49,29 +49,20 @@ class MemoryStore implements Store {
   }
 
   async publish(channel: string, message: string) {
-    for (const handler of this.subs.get(channel) ?? []) handler(channel, message);
+    emit(this.subs, channel, message);
   }
 
   async subscribe(channel: string, handler: MessageHandler) {
-    const set = this.subs.get(channel) ?? new Set();
-    set.add(handler);
-    this.subs.set(channel, set);
-    return async () => {
-      set.delete(handler);
-    };
+    return addSub(this.subs, channel, handler);
   }
 }
 
 class UpstashStore implements Store {
   private redis: Redis;
-  private watcher: Redis;
   private subs = new Map<string, Set<MessageHandler>>();
-  private polls = new Map<string, { timer: ReturnType<typeof setInterval>; last: string | null }>();
 
   constructor(url: string, token: string) {
-    const options = { url, token, automaticDeserialization: false as const };
-    this.redis = new Redis(options);
-    this.watcher = new Redis(options);
+    this.redis = new Redis({ url, token, automaticDeserialization: false });
   }
 
   async get(key: string) {
@@ -92,50 +83,35 @@ class UpstashStore implements Store {
   }
 
   async publish(channel: string, message: string) {
-    await this.redis.set(`pubsub:${channel}`, message, { ex: 86400 });
-    const poll = this.polls.get(channel);
-    if (poll) poll.last = message;
-    for (const handler of this.subs.get(channel) ?? []) {
-      try {
-        handler(channel, message);
-      } catch (error) {
-        console.error(error);
-      }
-    }
+    emit(this.subs, channel, message);
   }
 
   async subscribe(channel: string, handler: MessageHandler) {
-    const set = this.subs.get(channel) ?? new Set();
-    set.add(handler);
-    this.subs.set(channel, set);
-
-    if (!this.polls.has(channel)) {
-      const last = asString(await this.watcher.get<string>(`pubsub:${channel}`));
-      const timer = setInterval(() => {
-        void this.poll(channel);
-      }, 400);
-      this.polls.set(channel, { timer, last });
-    }
-
-    return async () => {
-      set.delete(handler);
-      if (set.size > 0) return;
-      const poll = this.polls.get(channel);
-      if (poll) clearInterval(poll.timer);
-      this.polls.delete(channel);
-      this.subs.delete(channel);
-    };
+    return addSub(this.subs, channel, handler);
   }
+}
 
-  private async poll(channel: string) {
-    const state = this.polls.get(channel);
-    if (!state) return;
-    const value = asString(await this.watcher.get<string>(`pubsub:${channel}`));
-    if (value !== null && value !== state.last) {
-      state.last = value;
-      for (const handler of this.subs.get(channel) ?? []) handler(channel, value);
+function emit(subs: Map<string, Set<MessageHandler>>, channel: string, message: string) {
+  for (const handler of subs.get(channel) ?? []) {
+    try {
+      handler(channel, message);
+    } catch (error) {
+      console.error(error);
     }
   }
+}
+
+function addSub(
+  subs: Map<string, Set<MessageHandler>>,
+  channel: string,
+  handler: MessageHandler,
+) {
+  const set = subs.get(channel) ?? new Set();
+  set.add(handler);
+  subs.set(channel, set);
+  return async () => {
+    set.delete(handler);
+  };
 }
 
 const globalStore = globalThis as typeof globalThis & { __tracinhosStore?: Store };

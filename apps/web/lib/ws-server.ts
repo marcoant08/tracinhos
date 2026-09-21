@@ -1,5 +1,6 @@
 import {
   ERROR_MESSAGES,
+  DISCONNECT_TO_BOT_MS,
   isColorId,
   type ClientMessage,
   type ServerMessage,
@@ -10,9 +11,9 @@ import {
   drawEdge,
   joinRoom,
   markDisconnected,
+  promoteDisconnectedToBot,
   resumeRoom,
   startRoom,
-  sweepAndPlayBots,
 } from "./rooms";
 import { getStore } from "./store";
 
@@ -32,6 +33,24 @@ type Binding = {
 const byToken = new Map<string, Binding>();
 const byRoom = new Map<string, Set<SocketLike>>();
 const subscribed = new Map<string, Promise<() => Promise<void>>>();
+const botAfterDisconnect = new Map<string, ReturnType<typeof setTimeout>>();
+
+function clearBotAfterDisconnect(seatToken: string) {
+  const timer = botAfterDisconnect.get(seatToken);
+  if (timer) clearTimeout(timer);
+  botAfterDisconnect.delete(seatToken);
+}
+
+function scheduleBotAfterDisconnect(roomCode: string, playerId: string, seatToken: string) {
+  clearBotAfterDisconnect(seatToken);
+  botAfterDisconnect.set(
+    seatToken,
+    setTimeout(() => {
+      botAfterDisconnect.delete(seatToken);
+      void promoteDisconnectedToBot(roomCode, playerId);
+    }, DISCONNECT_TO_BOT_MS),
+  );
+}
 
 function send(socket: SocketLike, message: ServerMessage) {
   try {
@@ -155,6 +174,7 @@ export function bindSocket(socket: SocketLike) {
     binding = { socket, roomCode, playerId, seatToken };
     byToken.set(seatToken, binding);
     addToRoom(roomCode, socket);
+    clearBotAfterDisconnect(seatToken);
   }
 
   let chain = Promise.resolve();
@@ -171,20 +191,12 @@ export function bindSocket(socket: SocketLike) {
     if (byToken.get(binding.seatToken)?.socket === socket) {
       byToken.delete(binding.seatToken);
       void markDisconnected(binding.roomCode, binding.playerId);
+      scheduleBotAfterDisconnect(binding.roomCode, binding.playerId, binding.seatToken);
     }
     removeFromRoom(binding.roomCode, socket);
   });
 }
 
-let sweeperStarted = false;
-
 export function startDisconnectSweeper() {
-  if (sweeperStarted) return;
-  sweeperStarted = true;
-  setInterval(() => {
-    const rooms = new Set([...byRoom.keys()]);
-    for (const code of rooms) {
-      void sweepAndPlayBots(code);
-    }
-  }, 5000);
+  /* conversion to bot is scheduled on socket close */
 }

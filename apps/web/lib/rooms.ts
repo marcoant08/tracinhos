@@ -254,9 +254,20 @@ export async function markDisconnected(code: string, playerId: string): Promise<
   }
 }
 
-export async function sweepAndPlayBots(code: string): Promise<PublicRoom | null> {
+export async function promoteDisconnectedToBot(
+  code: string,
+  playerId: string,
+): Promise<PublicRoom | null> {
   try {
-    const result = await mutate(code, async () => ({}));
+    const room = await mustRoom(code);
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player || player.kind === "bot" || player.connected) return toPublic(room);
+    const result = await mutate(code, async (next) => {
+      const seat = next.players.find((p) => p.id === playerId);
+      if (!seat || seat.kind === "bot" || seat.connected) return {};
+      seat.kind = "bot";
+      return {};
+    });
     queueBotTurns(code);
     return result.room;
   } catch (error) {
@@ -293,26 +304,34 @@ async function mutate<T extends Record<string, unknown>>(
   if (!locked) throw new Error("lock_timeout");
   let extra: T;
   let publicRoom: PublicRoom;
+  let dirty = false;
   try {
-    const room = sweep(await mustRoom(normalized));
+    const room = await mustRoom(normalized);
+    const before = JSON.stringify(room);
+    sweep(room);
     extra = await fn(room);
-    room.updatedAt = Date.now();
-    await saveRoom(room);
+    dirty = JSON.stringify(room) !== before;
+    if (dirty) {
+      room.updatedAt = Date.now();
+      await saveRoom(room);
+    }
     publicRoom = toPublic(room);
   } finally {
     await store.del(lockKey);
   }
-  void store
-    .publish(
-      `room:${normalized}`,
-      JSON.stringify({
-        type: publicRoom.status === "finished" ? "game:over" : "game:state",
-        room: publicRoom,
-      }),
-    )
-    .catch((error) => {
-      console.error(error);
-    });
+  if (dirty) {
+    void store
+      .publish(
+        `room:${normalized}`,
+        JSON.stringify({
+          type: publicRoom.status === "finished" ? "game:over" : "game:state",
+          room: publicRoom,
+        }),
+      )
+      .catch((error) => {
+        console.error(error);
+      });
+  }
   return { ...extra, room: publicRoom };
 }
 
@@ -420,12 +439,18 @@ export function queueBotTurns(code: string) {
 
 async function playOneBotMove(code: string): Promise<void> {
   try {
+    const peek = await mustRoom(code);
+    if (peek.status !== "playing" || !peek.game || peek.game.status !== "playing") return;
+    const currentId = peek.game.playerIds[peek.game.currentPlayerIndex] ?? "";
+    const current = peek.players.find((p) => p.id === currentId);
+    if (!current || current.kind !== "bot") return;
+
     const result = await mutate(code, async (room) => {
       if (room.status !== "playing" || !room.game || room.game.status !== "playing") {
         return { again: false };
       }
-      const currentId = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
-      const player = room.players.find((p) => p.id === currentId);
+      const id = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
+      const player = room.players.find((p) => p.id === id);
       if (!player || player.kind !== "bot") return { again: false };
       room.game = applyMove(room.game, player.id, pickBotMove(room.game, Math.random)).state;
       if (room.game.status === "finished") room.status = "finished";

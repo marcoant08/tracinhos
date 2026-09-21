@@ -43,12 +43,9 @@ export function RoomApp({ code }: { code: string }) {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
-    } else {
-      queueRef.current.push(payload);
+      return;
     }
-    window.setTimeout(() => {
-      void refreshRoom();
-    }, 250);
+    queueRef.current.push(payload);
   }
 
   useEffect(() => {
@@ -120,14 +117,6 @@ export function RoomApp({ code }: { code: string }) {
       wsRef.current?.close();
     };
   }, [session?.seatToken, roomCode, elsewhere]);
-
-  useEffect(() => {
-    if (!session || elsewhere || !room || room.status === "finished") return;
-    const timer = window.setInterval(() => {
-      void refreshRoom();
-    }, 800);
-    return () => window.clearInterval(timer);
-  }, [session, elsewhere, room?.status, roomCode]);
 
   useEffect(() => {
     if (!toast) return;
