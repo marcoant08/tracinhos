@@ -41,6 +41,7 @@ describe("applyMove", () => {
     ).toThrow(/illegal_move/);
 
     const after = play(state, "a", { orientation: "h", row: 0, col: 0 });
+    expect(after.horizontal[0][0]).toBe("a");
     expect(() =>
       applyMove(after, "b", { orientation: "h", row: 0, col: 0 }),
     ).toThrow(/illegal_move/);

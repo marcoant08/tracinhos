@@ -173,32 +173,32 @@ export function Board({
           }),
         )}
         {board.horizontal.map((row, r) =>
-          row.map((drawn, c) => (
-            <line
-              key={`h-${r}-${c}`}
-              x1={PAD + c * CELL}
-              y1={PAD + r * CELL}
-              x2={PAD + (c + 1) * CELL}
-              y2={PAD + r * CELL}
-              stroke={drawn ? "#2b2118" : "#e6d7c2"}
-              strokeWidth={drawn ? 6 : 2}
-              strokeLinecap="round"
-            />
-          )),
+          row.map((owner, c) =>
+            edgeMarks({
+              key: `h-${r}-${c}`,
+              owner,
+              colors,
+              x1: PAD + c * CELL,
+              y1: PAD + r * CELL,
+              x2: PAD + (c + 1) * CELL,
+              y2: PAD + r * CELL,
+              label: `traço horizontal linha ${r + 1} coluna ${c + 1}`,
+            }),
+          ),
         )}
         {board.vertical.map((row, r) =>
-          row.map((drawn, c) => (
-            <line
-              key={`v-${r}-${c}`}
-              x1={PAD + c * CELL}
-              y1={PAD + r * CELL}
-              x2={PAD + c * CELL}
-              y2={PAD + (r + 1) * CELL}
-              stroke={drawn ? "#2b2118" : "#e6d7c2"}
-              strokeWidth={drawn ? 6 : 2}
-              strokeLinecap="round"
-            />
-          )),
+          row.map((owner, c) =>
+            edgeMarks({
+              key: `v-${r}-${c}`,
+              owner,
+              colors,
+              x1: PAD + c * CELL,
+              y1: PAD + r * CELL,
+              x2: PAD + c * CELL,
+              y2: PAD + (r + 1) * CELL,
+              label: `traço vertical linha ${r + 1} coluna ${c + 1}`,
+            }),
+          ),
         )}
         {Array.from({ length: dots }, (_, row) =>
           Array.from({ length: dots }, (_, col) => {
@@ -228,8 +228,55 @@ function samePoint(a: Point, b: Point) {
 
 function isDrawn(game: GameState, edge: Edge) {
   return edge.orientation === "h"
-    ? game.horizontal[edge.row][edge.col]
-    : game.vertical[edge.row][edge.col];
+    ? game.horizontal[edge.row][edge.col] !== null
+    : game.vertical[edge.row][edge.col] !== null;
+}
+
+function edgeMarks({
+  key,
+  owner,
+  colors,
+  x1,
+  y1,
+  x2,
+  y2,
+  label,
+}: {
+  key: string;
+  owner: string | null;
+  colors: Map<string, ColorId>;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  label: string;
+}) {
+  const drawn = owner !== null;
+  const colorId = owner ? colors.get(owner) : undefined;
+  return (
+    <g key={key} aria-label={label}>
+      <line
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        stroke={drawn ? "#2b2118" : "#e6d7c2"}
+        strokeWidth={drawn ? 6 : 2}
+        strokeLinecap="round"
+      />
+      {drawn && colorId ? (
+        <line
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={COLOR_HEX[colorId]}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
+      ) : null}
+    </g>
+  );
 }
 
 function edgeBetween(a: Point, b: Point): Edge | null {

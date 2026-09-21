@@ -11,8 +11,8 @@ export type Edge = {
 
 export type GameState = {
   size: number;
-  horizontal: boolean[][];
-  vertical: boolean[][];
+  horizontal: (string | null)[][];
+  vertical: (string | null)[][];
   owners: (string | null)[][];
   playerIds: string[];
   currentPlayerIndex: number;
@@ -45,8 +45,8 @@ export function createGame(size: number, playerIds: string[]): GameState {
 
   return {
     size,
-    horizontal: zeros(n, size),
-    vertical: zeros(size, n),
+    horizontal: emptyEdges(n, size),
+    vertical: emptyEdges(size, n),
     owners: emptyOwners(size),
     playerIds: [...playerIds],
     currentPlayerIndex: 0,
@@ -75,7 +75,7 @@ export function applyMove(
   }
 
   const next = cloneState(state);
-  setDrawn(next, edge, true);
+  setDrawn(next, edge, playerId);
 
   const completedSquares: { row: number; col: number }[] = [];
   for (const sq of adjacentSquares(next.size, edge)) {
@@ -147,8 +147,8 @@ export function scoreSumEqualsOwned(state: GameState): boolean {
   return sum === owned;
 }
 
-function zeros(rows: number, cols: number): boolean[][] {
-  return Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
+function emptyEdges(rows: number, cols: number): (string | null)[][] {
+  return Array.from({ length: rows }, () => Array.from({ length: cols }, () => null));
 }
 
 function emptyOwners(size: number): (string | null)[][] {
@@ -180,14 +180,18 @@ function inBounds(state: GameState, edge: Edge): boolean {
 }
 
 function isDrawn(state: GameState, edge: Edge): boolean {
+  return edgeOwner(state, edge) !== null;
+}
+
+function edgeOwner(state: GameState, edge: Edge): string | null {
   return edge.orientation === "h"
     ? state.horizontal[edge.row][edge.col]
     : state.vertical[edge.row][edge.col];
 }
 
-function setDrawn(state: GameState, edge: Edge, value: boolean): void {
-  if (edge.orientation === "h") state.horizontal[edge.row][edge.col] = value;
-  else state.vertical[edge.row][edge.col] = value;
+function setDrawn(state: GameState, edge: Edge, playerId: string): void {
+  if (edge.orientation === "h") state.horizontal[edge.row][edge.col] = playerId;
+  else state.vertical[edge.row][edge.col] = playerId;
 }
 
 function adjacentSquares(
@@ -207,16 +211,16 @@ function adjacentSquares(
 
 function squareComplete(state: GameState, row: number, col: number): boolean {
   return (
-    state.horizontal[row][col] &&
-    state.horizontal[row + 1][col] &&
-    state.vertical[row][col] &&
-    state.vertical[row][col + 1]
+    state.horizontal[row][col] !== null &&
+    state.horizontal[row + 1][col] !== null &&
+    state.vertical[row][col] !== null &&
+    state.vertical[row][col + 1] !== null
   );
 }
 
 function wouldCompleteAny(state: GameState, edge: Edge): boolean {
   const next = cloneState(state);
-  setDrawn(next, edge, true);
+  setDrawn(next, edge, "_");
   return adjacentSquares(next.size, edge).some(
     (sq) => next.owners[sq.row][sq.col] === null && squareComplete(next, sq.row, sq.col),
   );
@@ -224,8 +228,8 @@ function wouldCompleteAny(state: GameState, edge: Edge): boolean {
 
 function remainingEdges(state: GameState): number {
   let open = 0;
-  for (const row of state.horizontal) for (const cell of row) if (!cell) open += 1;
-  for (const row of state.vertical) for (const cell of row) if (!cell) open += 1;
+  for (const row of state.horizontal) for (const cell of row) if (cell === null) open += 1;
+  for (const row of state.vertical) for (const cell of row) if (cell === null) open += 1;
   return open;
 }
 

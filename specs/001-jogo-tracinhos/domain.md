@@ -47,8 +47,8 @@ Quadrados: `S * S` (máximo 100).
 
 ```
 size: S
-horizontal: boolean[][]   // N x S, true = desenhada
-vertical: boolean[][]     // S x N
+horizontal: (string | null)[][]   // N x S, playerId se desenhada
+vertical: (string | null)[][]     // S x N
 owners: (string | null)[][]  // S x S
 playerIds: string[]       // ordem de turno, imutável após start
 currentPlayerIndex: number
@@ -57,7 +57,7 @@ status: "playing" | "finished"
 winnerIds: string[]       // vazio enquanto playing
 ```
 
-`createGame(size, playerIds)` inicializa tudo `false`/`null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`.
+`createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`.
 
 ## Jogada legal
 
@@ -65,7 +65,7 @@ winnerIds: string[]       // vazio enquanto playing
 
 - `status === "playing"`
 - índices dentro da grade
-- a aresta ainda é `false`
+- a aresta ainda é `null`
 
 ## Aplicar jogada
 
@@ -78,12 +78,12 @@ Pré-condições (erro de domínio, não muta):
 
 Efeitos:
 
-1. Marca a aresta `true`.
+1. Marca a aresta com o `playerId` de quem jogou.
 2. Para cada quadrado adjacente que passou a ter os 4 lados, define `owners[r][c] = playerId` e incrementa `scores[playerId]`.
 3. Um traço toca no máximo 2 quadrados.
 4. Se `completedSquares.length > 0`, **não** avança o índice (jogada extra, uma só, mesmo fechando 2).
 5. Se nenhum quadrado fechou, `currentPlayerIndex = (currentPlayerIndex + 1) % playerIds.length`.
-6. Se não restam arestas `false`, `status = "finished"` e `winnerIds` = todos os `playerId` com score igual ao máximo.
+6. Se não restam arestas `null`, `status = "finished"` e `winnerIds` = todos os `playerId` com score igual ao máximo.
 
 O estado retornado é um novo objeto (imutável para o caller).
 
@@ -133,6 +133,6 @@ Transições de assento:
 
 - `playerIds.length` ∈ `[2, 5]` após start.
 - Soma dos scores = número de quadrados com dono.
-- Quadrado com dono tem os 4 lados `true`.
+- Quadrado com dono tem os 4 lados com `playerId`.
 - `finished` ⇔ zero arestas livres.
 - Em `finished`, `winnerIds` não é vazio.
