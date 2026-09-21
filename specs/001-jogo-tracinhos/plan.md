@@ -49,7 +49,7 @@ Localmente o `server.ts` também atende `/api/*` no mesmo processo do WebSocket,
 
 - `packages/game`: `createGame`, `applyMove`, `pickBotMove`, `isLegalEdge`, constantes.
 - `packages/shared`: paleta, tipos REST/WS, códigos de erro, chave de `localStorage`.
-- `apps/web/lib/rooms.ts`: create/join/resume/start/addBot/draw + Redis.
+- `apps/web/lib/rooms.ts`: create/join/resume/start/setStarter/addBot/draw + Redis.
 - `apps/web/lib/ws.ts`: parse de mensagens, bind conexão ↔ assento.
 - `apps/web/app`: páginas `/` e `/sala/[codigo]`.
 

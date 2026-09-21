@@ -77,7 +77,9 @@ winnerIds: string[]       // vazio enquanto playing
 
 `turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`. `updatedAt` (snapshot público) é epoch ms da última mutação. Em `lobby` e `playing` o cliente GET a cada `LOBBY_POLL_MS` (aba visível): o pub/sub é in-process e na Vercel o WS de outro isolate não recebe o lance.
 
-`createGame(cols, playerIds, rows = cols)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. A sala define o prazo no `start` e a cada lance.
+`createGame(cols, playerIds, rows = cols)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. No `start` a sala coloca `currentPlayerIndex` em quem o host escolheu (`starterPlayerId`) ou num índice aleatório. A sala define o prazo no `start` e a cada lance.
+
+`starterPlayerId` mora na **sala**: `null` = aleatório (padrão). Só o host altera no lobby.
 
 `countEdgesByPlayer(state)` deriva, das grades `horizontal`/`vertical`, quantos traços cada `playerId` fez. Não mora no `GameState`. Timeout e lance normal incrementam igual (a aresta ganha dono).
 

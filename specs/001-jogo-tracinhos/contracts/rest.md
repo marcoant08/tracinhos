@@ -22,11 +22,12 @@ Snapshot público da sala (sem tokens). Em `lobby` e `playing` o cliente busca a
   "takenColors": ["red"],
   "game": null,
   "turnDeadlineAt": null,
+  "starterPlayerId": null,
   "updatedAt": 1710000000000
 }
 ```
 
-`takenNicks` já em minúsculas (chave de unicidade). `game` é o `GameState` público ou `null`. `updatedAt` é epoch ms da última mutação da sala.
+`takenNicks` já em minúsculas (chave de unicidade). `game` é o `GameState` público ou `null`. `starterPlayerId` é quem o host escolheu para abrir (`null` = aleatório). `updatedAt` é epoch ms da última mutação da sala.
 
 **404** `{ "error": "room_not_found" }`
 

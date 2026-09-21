@@ -72,7 +72,8 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 - Com 1 participante, iniciar falha (`not_enough_players`).
 - Ao iniciar, status vira `playing` e todos recebem o snapshot do tabuleiro vazio.
 - Lista de quem já está na sala (host e join) atualiza **sozinha** quando entra gente ou bot — sem F5.
-- Ordem dos turnos = ordem de assento (join / bots na sequência em que entraram).
+- Só o host altera **quem começa** (select; padrão **Aleatório**; `not_host` se outro tentar). Os demais vêem o valor atual ao vivo, sem controle. A rotação segue a ordem de assento; só o primeiro índice muda.
+- Ordem dos turnos = ordem de assento (join / bots na sequência em que entraram), a partir de quem o host escolheu (ou do sorteio).
 - “Copiar link” copia `{origin}/sala/{codigo}`, não só o código de 4 letras.
 - No join pelo link, o botão visível é **Entrar** (não “Sentar”).
 

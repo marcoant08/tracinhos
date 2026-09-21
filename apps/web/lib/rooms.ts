@@ -50,6 +50,7 @@ export type Room = {
   players: Seat[];
   game: GameState | null;
   turnDeadlineAt: number | null;
+  starterPlayerId: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -72,6 +73,7 @@ export function toPublic(room: Room): PublicRoom {
     takenColors: room.players.map((p) => p.color),
     game: room.game,
     turnDeadlineAt: room.status === "playing" ? (room.turnDeadlineAt ?? null) : null,
+    starterPlayerId: room.starterPlayerId,
     updatedAt: room.updatedAt,
   };
 }
@@ -119,6 +121,7 @@ export async function createRoom(input: {
     ],
     game: null,
     turnDeadlineAt: null,
+    starterPlayerId: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -213,17 +216,36 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
   return result.room;
 }
 
+export async function setStarter(
+  code: string,
+  actorId: string,
+  playerId: string | null,
+): Promise<PublicRoom> {
+  const result = await mutate(code, async (room) => {
+    if (room.status !== "lobby") throw new RoomError("game_already_started");
+    if (room.hostPlayerId !== actorId) throw new RoomError("not_host");
+    if (playerId !== null && !room.players.some((p) => p.id === playerId)) {
+      throw new RoomError("not_in_room");
+    }
+    room.starterPlayerId = playerId;
+    return {};
+  });
+  return result.room;
+}
+
 export async function startRoom(code: string, actorId: string): Promise<PublicRoom> {
   const result = await mutate(code, async (room) => {
     if (room.status !== "lobby") throw new RoomError("game_already_started");
     if (room.hostPlayerId !== actorId) throw new RoomError("not_host");
     if (room.players.length < 2) throw new RoomError("not_enough_players");
     room.status = "playing";
-    room.game = createGame(
-      room.cols,
-      room.players.map((p) => p.id),
-      room.rows,
-    );
+    const playerIds = room.players.map((p) => p.id);
+    room.game = createGame(room.cols, playerIds, room.rows);
+    const chosen =
+      room.starterPlayerId && playerIds.includes(room.starterPlayerId)
+        ? room.starterPlayerId
+        : playerIds[Math.floor(Math.random() * playerIds.length)]!;
+    room.game.currentPlayerIndex = room.game.playerIds.indexOf(chosen);
     refreshTurnDeadline(room);
     return {};
   });
@@ -378,9 +400,15 @@ async function mustRoom(code: string): Promise<Room> {
 }
 
 function hydrateRoom(room: Room & { size?: number }): Room {
-  if (typeof room.cols === "number" && typeof room.rows === "number") return room;
-  const side = typeof room.size === "number" ? room.size : DEFAULT_SIZE;
-  return { ...room, cols: side, rows: side };
+  const withGrid =
+    typeof room.cols === "number" && typeof room.rows === "number"
+      ? room
+      : {
+          ...room,
+          cols: typeof room.size === "number" ? room.size : DEFAULT_SIZE,
+          rows: typeof room.size === "number" ? room.size : DEFAULT_SIZE,
+        };
+  return { ...withGrid, starterPlayerId: withGrid.starterPlayerId ?? null };
 }
 
 async function saveRoom(room: Room): Promise<void> {

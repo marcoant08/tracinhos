@@ -89,6 +89,7 @@ export type PublicRoom = {
   takenColors: ColorId[];
   game: GameState | null;
   turnDeadlineAt: number | null;
+  starterPlayerId: string | null;
   updatedAt: number;
 };
 
@@ -120,6 +121,7 @@ export type ClientMessage =
   | { type: "room:join"; roomCode: string; nick: string; color: ColorId }
   | { type: "room:resume"; roomCode: string; seatToken: string }
   | { type: "room:addBot" }
+  | { type: "room:setStarter"; playerId: string | null }
   | { type: "room:start" }
   | { type: "game:draw"; edge: { orientation: "h" | "v"; row: number; col: number } };
 

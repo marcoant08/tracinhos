@@ -12,6 +12,7 @@ Mensagens JSON com campo `type`. Uma conexão = no máximo um assento.
 { "type": "room:join", "roomCode": "AB3K", "nick": "Bia", "color": "blue" }
 { "type": "room:resume", "roomCode": "AB3K", "seatToken": "opaque" }
 { "type": "room:addBot" }
+{ "type": "room:setStarter", "playerId": null }
 { "type": "room:start" }
 { "type": "game:draw", "edge": { "orientation": "h", "row": 0, "col": 0 } }
 ```
@@ -43,4 +44,4 @@ Segunda conexão com o mesmo token: a anterior recebe `resumed_elsewhere` e o se
 
 ## Snapshot
 
-Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`. `turnDeadlineAt` (no snapshot da sala) é epoch ms do fim desta vez (humano 40 s ou bot 1 s); o cliente deriva os segundos restantes. `updatedAt` evita um GET atrasado sobrescrever um snapshot mais novo.
+Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`. `starterPlayerId` é quem o host escolheu para abrir (`null` = aleatório). `turnDeadlineAt` (no snapshot da sala) é epoch ms do fim desta vez (humano 40 s ou bot 1 s); o cliente deriva os segundos restantes. `updatedAt` evita um GET atrasado sobrescrever um snapshot mais novo.

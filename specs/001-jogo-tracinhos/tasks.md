@@ -62,6 +62,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] Select da grade maior (min-height 56px, fonte ≥ 1.15rem) no lobby.
 - [x] “Adicionar bot” desabilitado com sala cheia (`MAX_PLAYERS`).
+- [x] Lobby: select “Quem começa” (padrão Aleatório); host grava `starterPlayerId`; start usa essa escolha.
 - [x] Preferência `tracinhos:identity` (nick+cor+grade) sobrevive a F5 nos formulários; nick/cor no criar/entrar; grade ao selecionar.
 - [x] `BOT_NICKS` editável; addBot sorteia nome livre; fallback `Bot N`.
 - [x] Nick do bot sempre com prefixo `Bot `; lista extra (Xandon, Barco, Zuão, …).

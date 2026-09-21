@@ -57,8 +57,8 @@ Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. 
 - Código grande + botão **“Copiar link”**: copia a URL absoluta da sala (`{origin}/sala/{codigo}`), não só o código. Toast curto “Link copiado”.
 - Link **Regras** → `/regras` (também no join e na home; **não** na partida nem no resultado).
 - Lista de jogadores (bolinha da cor **grande** + nick + host/bot). Atualiza sozinha quando alguém entra (WS e GET a cada `LOBBY_POLL_MS` / 1 s, aba visível). Na **partida** o mesmo GET: o WS da Vercel não atravessa instâncias, então o traço do outro celular só chega pelo poll. Sem poll no resultado.
-- Host: “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), “Começar” (desabilitado se < 2).
-- Não-host: texto “Esperando o host…”.
+- Host: “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), select **Quem começa** (padrão **Aleatório**; opções = nicks da sala), “Começar” (desabilitado se < 2).
+- Não-host: **não edita** quem começa; vê o mesmo rótulo e o valor atual (Aleatório ou nick + cor) + “Esperando o host…”.
 
 ### Playing
 
@@ -73,9 +73,9 @@ Entre o placar e o tabuleiro, o mesmo vão que entre o indicador de vez (“Sua 
 Abaixo, viewport do tabuleiro:
 
 - O tabuleiro **escala para caber** no espaço restante (largura e altura da viewport menos HUD e safe-area). **Todos os pontos visíveis o tempo todo.** Sem pan/zoom obrigatório; se sobrar espaço, o papel fica no topo, com o vão acima igual ao do HUD.
-- **Borda / vinheta no papel** (só na tela de quem está na vez). Borda pisca na **cor do jogador**; aos ≤ 10 s fica **laranja** (`#e06b20`) e dispara o fade uma vez; aos ≤ 5 s fica **vermelha** (`#d64545`) com o fade. Vez de outra pessoa ou de bot: papel normal, sem borda. Sem empurrar layout.
-- Pontos grandes o bastante para o polegar (escalam com a célula). Traço feito em tinta escura, com um fio mais fino da cor de quem jogou por cima; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
-- **Dois toques:** origem pisca em acento (`#c45c26`); destinos livres piscam em teal (`#1f8a8a`). Sem destino livre, o ponto não vira origem.
+- **Borda / vinheta no papel** (só na tela de quem está na vez). Borda pisca **dentro** do papel (vão de 2px até a lateral), no mesmo arredondamento do tabuleiro, na **cor do jogador**; aos ≤ 10 s fica **laranja** (`#e06b20`) e dispara o fade uma vez; aos ≤ 5 s fica **vermelha** (`#d64545`) com o fade. Vez de outra pessoa ou de bot: papel normal, sem borda. Sem empurrar layout.
+- Pontos grandes o bastante para o polegar (escalam com a célula): **brancos com borda preta**. Traço feito em tinta escura, com um fio mais fino da cor de quem jogou por cima; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
+- **Dois toques:** origem e destinos livres **piscam** (mesmo branco + borda preta, só maiores). Sem destino livre, o ponto não vira origem.
 - Clique no segundo ponto válido pinta o traço **na hora** (e o quadrado, se fechou) e confirma com `POST /api/rooms/:code/draw` (o HUD/relógio seguem o snapshot da resposta). Se o POST falhar de rede, cai no `game:draw` via WS. O traço local **fica** até o snapshot confirmar; se o servidor rejeitar só o último lance em voo, esse some. Sem fechar: não aceita outro clique até confirmar (evita o traço sumir). Extra: dá para traçar de novo sem esperar o round-trip. Traço já existente não é destino.
 - Fora da vez (pelo snapshot do servidor), sem seleção e pontos não reagem a toque de jogada. O HUD “Sua vez” / “Vez de X” segue o servidor, não o traço otimista — assim um WS atrasado não trava o clique na vez certa.
 - Jogada ilegal ou fora da vez: toast no canto superior direito, sem avançar.

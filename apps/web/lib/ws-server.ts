@@ -13,6 +13,7 @@ import {
   markDisconnected,
   promoteDisconnectedToBot,
   resumeRoom,
+  setStarter,
   startRoom,
 } from "./rooms";
 import { getStore } from "./store";
@@ -136,6 +137,12 @@ export function bindSocket(socket: SocketLike) {
 
       if (message.type === "room:addBot") {
         const room = await addBot(binding.roomCode, binding.playerId);
+        send(socket, { type: "game:state", room });
+        return;
+      }
+
+      if (message.type === "room:setStarter") {
+        const room = await setStarter(binding.roomCode, binding.playerId, message.playerId);
         send(socket, { type: "game:state", room });
         return;
       }

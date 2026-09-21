@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import type { GameState } from "@tracinhos/game";
 import { BOARD_GLOW_MS, COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
 
 const CELL = 56;
 const PAD = 28;
 const DOT_HIT = 22;
+const PAPER_RX = 16;
 type Edge = { orientation: "h" | "v"; row: number; col: number };
 type Point = { row: number; col: number };
 
@@ -23,8 +24,12 @@ export function Board({
   flash?: string | null;
   onDraw: (edge: Edge) => void;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [selected, setSelected] = useState<Point | null>(null);
+  const [frame, setFrame] = useState<{ top: number; left: number; width: number; height: number } | null>(
+    null,
+  );
   const moved = useRef(false);
   const origin = useRef<{ x: number; y: number } | null>(null);
 
@@ -33,6 +38,29 @@ export function Board({
   useEffect(() => {
     if (!canDraw) setSelected(null);
   }, [canDraw]);
+
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    const wrap = wrapRef.current;
+    if (!svg || !wrap || !borderColor) {
+      setFrame(null);
+      return;
+    }
+    const sync = () => {
+      const a = wrap.getBoundingClientRect();
+      const b = svg.getBoundingClientRect();
+      setFrame({
+        top: b.top - a.top,
+        left: b.left - a.left,
+        width: b.width,
+        height: b.height,
+      });
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, [borderColor, room.game?.cols, room.game?.rows]);
 
   if (!game) return null;
   const board: GameState = game;
@@ -113,6 +141,7 @@ export function Board({
 
   return (
     <div
+      ref={wrapRef}
       className="board-wrap"
       data-glow={borderColor ? "on" : undefined}
       onPointerDown={onPointerDown}
@@ -141,25 +170,11 @@ export function Board({
               y="0"
               width={width}
               height={height}
-              rx="16"
+              rx={PAPER_RX}
               fill="url(#turn-glow)"
               pointerEvents="none"
             />
           </g>
-        ) : null}
-        {borderColor ? (
-          <rect
-            className="board-turn-border"
-            x="3"
-            y="3"
-            width={width - 6}
-            height={height - 6}
-            rx="13"
-            fill="none"
-            stroke={borderColor}
-            strokeWidth="4"
-            pointerEvents="none"
-          />
         ) : null}
         {board.owners.map((row, r) =>
           row.map((owner, c) => {
@@ -224,6 +239,19 @@ export function Board({
           }),
         )}
       </svg>
+      {borderColor && frame ? (
+        <span
+          className="board-turn-border"
+          style={{
+            color: borderColor,
+            top: frame.top + 2,
+            left: frame.left + 2,
+            width: frame.width - 4,
+            height: frame.height - 4,
+          }}
+          aria-hidden="true"
+        />
+      ) : null}
     </div>
   );
 }

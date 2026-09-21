@@ -381,7 +381,10 @@ export function RoomApp({ code }: { code: string }) {
     );
   }
 
-  const me = room.players.find((p) => p.id === session.playerId);
+  const isHost = session.playerId === room.hostPlayerId;
+  const starterPlayer =
+    room.starterPlayerId ? room.players.find((p) => p.id === room.starterPlayerId) : undefined;
+  const starterValue = starterPlayer?.id ?? "";
   const viewRoom = withPendingMoves(room, session.playerId, pendingEdges);
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
@@ -473,7 +476,41 @@ export function RoomApp({ code }: { code: string }) {
             </li>
           ))}
         </ul>
-        {me && session.playerId === room.hostPlayerId ? (
+        <div className="field">
+          <label htmlFor={isHost ? "starter" : undefined}>Quem começa</label>
+          {isHost ? (
+            <select
+              id="starter"
+              value={starterValue}
+              onChange={(e) => {
+                const playerId = e.target.value || null;
+                setRoom((prev) =>
+                  prev ? { ...prev, starterPlayerId: playerId, updatedAt: Date.now() } : prev,
+                );
+                send({ type: "room:setStarter", playerId });
+              }}
+            >
+              <option value="">Aleatório</option>
+              {room.players.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nick}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="starter-read">
+              {starterPlayer ? (
+                <>
+                  <span className="dot" style={{ background: COLOR_HEX[starterPlayer.color] }} />
+                  {starterPlayer.nick}
+                </>
+              ) : (
+                "Aleatório"
+              )}
+            </p>
+          )}
+        </div>
+        {isHost ? (
           <>
             <button
               className="btn ghost"
