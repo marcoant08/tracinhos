@@ -13,6 +13,9 @@ Motor puro. Sem I/O. Implementação: `packages/game`.
 | `NICK_MIN` | 2 |
 | `NICK_MAX` | 16 |
 | `DISCONNECT_TO_BOT_MS` | 30000 |
+| `TURN_TIMEOUT_MS` | 25000 |
+| `BOT_THINK_MIN_MS` | 1000 |
+| `BOT_THINK_MAX_MS` | 2000 |
 | `ROOM_TTL_SECONDS` | 86400 |
 
 Paleta de cores (ids estáveis):
@@ -55,9 +58,10 @@ currentPlayerIndex: number
 scores: Record<playerId, number>
 status: "playing" | "finished"
 winnerIds: string[]       // vazio enquanto playing
+turnDeadlineAt: number    // epoch ms; fim do tempo desta vez (humano)
 ```
 
-`createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`.
+`createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`, `turnDeadlineAt` fica a cargo da sala (`now + TURN_TIMEOUT_MS` no `start`). O motor puro pode omitir o relógio; a sala é a fonte do prazo.
 
 ## Jogada legal
 
@@ -81,11 +85,17 @@ Efeitos:
 1. Marca a aresta com o `playerId` de quem jogou.
 2. Para cada quadrado adjacente que passou a ter os 4 lados, define `owners[r][c] = playerId` e incrementa `scores[playerId]`.
 3. Um traço toca no máximo 2 quadrados.
-4. Se `completedSquares.length > 0`, **não** avança o índice (jogada extra, uma só, mesmo fechando 2).
-5. Se nenhum quadrado fechou, `currentPlayerIndex = (currentPlayerIndex + 1) % playerIds.length`.
+4. **Sempre** avança `currentPlayerIndex = (currentPlayerIndex + 1) % playerIds.length`, mesmo se fechou quadrado. Quem jogou não joga de novo em seguida.
+5. A sala redefine `turnDeadlineAt = now + TURN_TIMEOUT_MS` para a nova vez humana (ou `null` se a vez for de bot).
 6. Se não restam arestas `null`, `status = "finished"` e `winnerIds` = todos os `playerId` com score igual ao máximo.
 
 O estado retornado é um novo objeto (imutável para o caller).
+
+## Traço aleatório no timeout (`pickRandomMove`)
+
+`pickRandomMove(state, random?) → edge` — uma aresta legal ao acaso (primeira da lista se `random` omitido, para testes).
+
+Se o humano estoura `TURN_TIMEOUT_MS` sem `game:draw`, a sala aplica `applyMove` com `pickRandomMove` no `playerId` da vez. Há traço e possível ponto; a vez passa. O servidor emite `game:notice` (`timeout_draw`) para o toast.
 
 ## Bot guloso
 
@@ -94,6 +104,18 @@ O estado retornado é um novo objeto (imutável para o caller).
 1. Lista arestas legais.
 2. Se alguma completa pelo menos um quadrado, escolhe uma delas (primeira em ordem H depois V, varredura row-major — determinístico se `random` omitido; testes usam essa ordem).
 3. Senão escolhe aleatória (ou a primeira se `random` omitido, para testes).
+
+O **servidor** (não o motor) espera `BOT_THINK_MIN_MS`–`BOT_THINK_MAX_MS` (teto 2s) antes de aplicar o lance do bot, para a vez aparecer no HUD.
+
+## Tempo da vez (humano)
+
+Só humano na vez. O relógio é da **sala** (`turnDeadlineAt` no snapshot).
+
+- Cada vez humana tem `TURN_TIMEOUT_MS` (25s).
+- `game:draw` no prazo: aplica e reinicia o prazo da próxima vez.
+- Se `now >= turnDeadlineAt` sem traço: marca um traço aleatório legal no nome de quem estava na vez e passa a vez.
+- Cliente atrasado: `game:draw` depois do prazo é ignorado (o traço aleatório já entrou); o snapshot e o toast de timeout chegam normalmente.
+- Relógio não corre no `lobby` nem em `finished`. Bot na vez: sem barra de 25s; o delay é o de pensar (até 2s).
 
 ## Identidade (sala, não tabuleiro)
 

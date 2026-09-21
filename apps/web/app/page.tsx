@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { COLOR_IDS, type ColorId } from "@tracinhos/shared";
 import { ColorPicker } from "@/components/ColorPicker";
+import { Toast } from "@/components/Toast";
 import { saveSession } from "@/lib/session";
 
 export default function HomePage() {
@@ -12,12 +13,17 @@ export default function HomePage() {
   const [nick, setNick] = useState("");
   const [color, setColor] = useState<ColorId>(COLOR_IDS[0]);
   const [joinCode, setJoinCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function create() {
     setBusy(true);
-    setError(null);
     try {
       const res = await fetch("/api/rooms", {
         method: "POST",
@@ -26,7 +32,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message ?? "Não deu para criar.");
+        setToast(data.message ?? "Não deu para criar.");
         return;
       }
       saveSession(data.session);
@@ -39,7 +45,7 @@ export default function HomePage() {
   function goJoin() {
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) {
-      setError("Digite o código da sala.");
+      setToast("Digite o código da sala.");
       return;
     }
     router.push(`/sala/${code}`);
@@ -50,6 +56,9 @@ export default function HomePage() {
       <header className="brand">
         <h1>Tracinhos</h1>
         <p>Ligue os pontos. Feche o quadrado. Jogue de novo.</p>
+        <a className="text-link" href="/regras">
+          Regras do jogo
+        </a>
       </header>
 
       <section className="card">
@@ -103,7 +112,7 @@ export default function HomePage() {
           Ir para a sala
         </button>
       </section>
-      {error ? <p className="error">{error}</p> : null}
+      <Toast message={toast} />
     </main>
   );
 }

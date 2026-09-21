@@ -6,7 +6,7 @@ import { COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
 
 const CELL = 56;
 const PAD = 28;
-const DOT_HIT = 24;
+const DOT_HIT = 22;
 
 type Edge = { orientation: "h" | "v"; row: number; col: number };
 type Point = { row: number; col: number };
@@ -20,14 +20,10 @@ export function Board({
   canDraw: boolean;
   onDraw: (edge: Edge) => void;
 }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const svgRef = useRef<SVGSVGElement>(null);
   const [selected, setSelected] = useState<Point | null>(null);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<{ dist: number; scale: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(
-    null,
-  );
+  const moved = useRef(false);
+  const origin = useRef<{ x: number; y: number } | null>(null);
 
   const game = room.game;
 
@@ -46,13 +42,13 @@ export function Board({
   const targets = selected ? freeNeighbors(board, selected) : [];
 
   function toLocal(clientX: number, clientY: number) {
-    const el = wrapRef.current;
-    if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left - view.x) / view.scale,
-      y: (clientY - rect.top - view.y) / view.scale,
-    };
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    const scale = Math.min(rect.width / width, rect.height / height);
+    const ox = rect.left + (rect.width - width * scale) / 2;
+    const oy = rect.top + (rect.height - height * scale) / 2;
+    return { x: (clientX - ox) / scale, y: (clientY - oy) / scale };
   }
 
   function pointAt(clientX: number, clientY: number): Point | null {
@@ -73,51 +69,23 @@ export function Board({
   }
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
-    wrapRef.current?.setPointerCapture(event.pointerId);
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    if (pointers.current.size === 1) {
-      drag.current = {
-        x: event.clientX,
-        y: event.clientY,
-        vx: view.x,
-        vy: view.y,
-        moved: false,
-      };
-    }
+    moved.current = false;
+    origin.current = { x: event.clientX, y: event.clientY };
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!pointers.current.has(event.pointerId)) return;
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    const pts = [...pointers.current.values()];
-    if (pts.length >= 2) {
-      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (!pinch.current) pinch.current = { dist, scale: view.scale };
-      else {
-        const next = Math.max(0.6, Math.min(3, pinch.current.scale * (dist / pinch.current.dist)));
-        setView((v) => ({ ...v, scale: next }));
-      }
-      return;
-    }
-    if (!drag.current) return;
-    const dx = event.clientX - drag.current.x;
-    const dy = event.clientY - drag.current.y;
-    if (Math.hypot(dx, dy) > 8) drag.current.moved = true;
-    if (drag.current.moved) {
-      setView((v) => ({ ...v, x: drag.current!.vx + dx, y: drag.current!.vy + dy }));
+    if (!origin.current) return;
+    if (Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 10) {
+      moved.current = true;
     }
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {
-    pointers.current.delete(event.pointerId);
-    if (pointers.current.size < 2) pinch.current = null;
-    if (pointers.current.size === 0) drag.current = null;
-  }
-
-  function onClick(event: { clientX: number; clientY: number }) {
+    const wasMoved = moved.current;
+    origin.current = null;
+    if (wasMoved) return;
     if (!canDraw) return;
     const point = pointAt(event.clientX, event.clientY);
-    if (drag.current?.moved && !point) return;
     if (!point) {
       setSelected(null);
       return;
@@ -139,22 +107,15 @@ export function Board({
 
   return (
     <div
-      ref={wrapRef}
       className="board-wrap"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onClick={onClick}
+      onPointerCancel={() => {
+        origin.current = null;
+      }}
     >
-      <svg
-        width={width}
-        height={height}
-        style={{
-          transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-          transformOrigin: "0 0",
-        }}
-      >
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
         {board.owners.map((row, r) =>
           row.map((owner, c) => {
             if (!owner) return null;
@@ -211,7 +172,7 @@ export function Board({
                 className={`board-dot board-dot-${kind}`}
                 cx={PAD + col * CELL}
                 cy={PAD + row * CELL}
-                r={isSel || isTarget ? 9 : 6}
+                r={isSel || isTarget ? 10 : 7}
                 aria-label={`ponto linha ${row + 1} coluna ${col + 1}`}
               />
             );

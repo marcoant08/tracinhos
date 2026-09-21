@@ -1,9 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { COLOR_HEX, COLOR_IDS, ERROR_MESSAGES, type ColorId, type PublicRoom, type Session } from "@tracinhos/shared";
+import { MAX_PLAYERS } from "@tracinhos/game";
+import {
+  COLOR_HEX,
+  COLOR_IDS,
+  ERROR_MESSAGES,
+  TURN_TIMEOUT_MS,
+  type ColorId,
+  type PublicPlayer,
+  type PublicRoom,
+  type Session,
+} from "@tracinhos/shared";
 import { Board } from "./Board";
 import { ColorPicker } from "./ColorPicker";
+import { Toast } from "./Toast";
 import { clearSession, loadSession, saveSession } from "@/lib/session";
 
 export function RoomApp({ code }: { code: string }) {
@@ -12,12 +23,14 @@ export function RoomApp({ code }: { code: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [nick, setNick] = useState("");
   const [color, setColor] = useState<ColorId>("blue");
-  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<object[]>([]);
   const backoff = useRef(1000);
+  const toastMs = useRef(2200);
+  const playerIdRef = useRef<string | null>(null);
+  playerIdRef.current = session?.playerId ?? null;
 
   function flush(ws: WebSocket) {
     while (queueRef.current.length && ws.readyState === WebSocket.OPEN) {
@@ -88,14 +101,22 @@ export function RoomApp({ code }: { code: string }) {
         }
         if (message.type === "game:state" || message.type === "game:over") {
           setRoom(message.room);
-          setError(null);
+        }
+        if (message.type === "game:notice" && message.notice === "timeout_draw") {
+          toastMs.current = 3500;
+          const mine = message.playerId === playerIdRef.current;
+          setToast(
+            mine
+              ? "Seu tempo acabou. Um traço aleatório foi marcado no seu nome."
+              : `O tempo de ${message.nick} acabou. Um traço aleatório foi marcado no nome de ${message.nick}.`,
+          );
         }
         if (message.type === "room:error") {
           if (message.error === "invalid_token" || message.error === "room_not_found") {
             clearSession(roomCode);
             setSession(null);
           }
-          setError(message.message);
+          toastMs.current = 2200;
           setToast(message.message);
         }
         if (message.type === "resumed_elsewhere") {
@@ -120,7 +141,7 @@ export function RoomApp({ code }: { code: string }) {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
+    const t = setTimeout(() => setToast(null), toastMs.current);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -136,7 +157,6 @@ export function RoomApp({ code }: { code: string }) {
   }, [room, session, color, freeColor]);
 
   async function sit() {
-    setError(null);
     const res = await fetch(`/api/rooms/${roomCode}/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,7 +164,7 @@ export function RoomApp({ code }: { code: string }) {
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.message ?? ERROR_MESSAGES[data.error as keyof typeof ERROR_MESSAGES]);
+      setToast(data.message ?? ERROR_MESSAGES[data.error as keyof typeof ERROR_MESSAGES]);
       return;
     }
     saveSession(data.session);
@@ -152,10 +172,20 @@ export function RoomApp({ code }: { code: string }) {
     setRoom(data.room);
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/sala/${roomCode}`);
+      setToast("Link copiado");
+    } catch {
+      setToast("Não deu para copiar.");
+    }
+  }
+
   if (room === undefined) {
     return (
       <main className="page">
         <p>Carregando sala…</p>
+        <Toast message={toast} />
       </main>
     );
   }
@@ -167,6 +197,7 @@ export function RoomApp({ code }: { code: string }) {
           <h2>Sala não encontrada</h2>
           <a href="/">Voltar ao lobby</a>
         </div>
+        <Toast message={toast} />
       </main>
     );
   }
@@ -177,6 +208,7 @@ export function RoomApp({ code }: { code: string }) {
         <div className="card">
           <h2>Você abriu o jogo noutra aba.</h2>
         </div>
+        <Toast message={toast} />
       </main>
     );
   }
@@ -198,10 +230,15 @@ export function RoomApp({ code }: { code: string }) {
             <ColorPicker value={color} taken={room.takenColors} onChange={setColor} />
           </div>
           <button className="btn" onClick={() => void sit()}>
-            Sentar
+            Entrar
           </button>
-          {error ? <p className="error">{error}</p> : null}
         </div>
+        <p>
+          <a className="text-link" href="/regras">
+            Regras do jogo
+          </a>
+        </p>
+        <Toast message={toast} />
       </main>
     );
   }
@@ -211,97 +248,184 @@ export function RoomApp({ code }: { code: string }) {
   const current = room.players.find((p) => p.id === currentId);
   const myTurn = room.status === "playing" && currentId === session.playerId;
 
+  if (room.status === "finished") {
+    return (
+      <main className="page">
+        <Results room={room} />
+        <Toast message={toast} />
+      </main>
+    );
+  }
+
+  if (room.status === "playing") {
+    return (
+      <main className="page page-play">
+        <div className="hud">
+          <div className="hud-top">
+            <div className={`turn ${myTurn ? "you" : ""}`}>
+              <span
+                className="dot"
+                style={{ background: current ? COLOR_HEX[current.color] : "#888" }}
+              />
+              {myTurn ? (
+                <span>
+                  Sua vez
+                  <small className="hint">Toque dois pontos vizinhos</small>
+                </span>
+              ) : (
+                <span>
+                  Vez de {current?.nick ?? "…"}
+                  {current?.kind === "bot" ? <small className="hint">pensando…</small> : null}
+                </span>
+              )}
+            </div>
+            <div className="timer-slot">
+              {room.turnDeadlineAt ? <TurnTimer deadlineAt={room.turnDeadlineAt} /> : null}
+            </div>
+          </div>
+          <ScoreList room={room} padded />
+        </div>
+        <Board room={room} canDraw={myTurn} onDraw={(edge) => send({ type: "game:draw", edge })} />
+        <Toast message={toast} />
+      </main>
+    );
+  }
+
   return (
     <main className="page">
-      {room.status !== "lobby" ? (
-        <div className="hud">
-          <div className={`turn ${myTurn ? "you" : ""}`}>
-            {room.status === "finished" ? (
-              winnersLabel(room)
-            ) : (
-              <>
-                <span className="dot" style={{ background: current ? COLOR_HEX[current.color] : "#888" }} />
-                {myTurn ? (
-                  <span>
-                    Sua vez
-                    <small className="hint">Toque dois pontos vizinhos</small>
-                  </span>
-                ) : (
-                  `Vez de ${current?.nick ?? "…"}`
-                )}
-              </>
-            )}
-          </div>
-          <div className="score">
-            {room.players.map((p) => (
-              <span key={p.id} className="chip">
-                <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
-                {p.nick} {room.game?.scores[p.id] ?? 0}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="brand">
-          <p className="code">{room.code}</p>
-          <button
-            className="btn ghost"
-            onClick={() => void navigator.clipboard.writeText(room.code)}
-          >
-            Copiar código
-          </button>
-        </div>
-      )}
+      <div className="brand">
+        <p className="code">{room.code}</p>
+        <button className="btn ghost" onClick={() => void copyLink()}>
+          Copiar link
+        </button>
+        <a className="text-link" href="/regras">
+          Regras
+        </a>
+      </div>
 
-      {room.status === "lobby" ? (
-        <div className="card">
-          <ul className="list">
-            {room.players.map((p) => (
-              <li key={p.id}>
-                <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
-                {p.nick}
-                {p.id === room.hostPlayerId ? " · host" : ""}
-                {p.kind === "bot" ? " · bot" : ""}
-              </li>
-            ))}
-          </ul>
-          {me && session.playerId === room.hostPlayerId ? (
-            <>
-              <button
-                className="btn ghost"
-                style={{ marginBottom: 10 }}
-                onClick={() => send({ type: "room:addBot" })}
-              >
-                Adicionar bot
-              </button>
-              <button
-                className="btn"
-                disabled={room.players.length < 2}
-                onClick={() => send({ type: "room:start" })}
-              >
-                Começar
-              </button>
-            </>
-          ) : (
-            <p>Esperando o host…</p>
-          )}
-          {error ? <p className="error">{error}</p> : null}
-        </div>
-      ) : (
-        <Board
-          room={room}
-          canDraw={myTurn}
-          onDraw={(edge) => send({ type: "game:draw", edge })}
-        />
-      )}
-      {toast ? <div className="toast">{toast}</div> : null}
+      <div className="card">
+        <ul className="list">
+          {room.players.map((p) => (
+            <li key={p.id}>
+              <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+              {p.nick}
+              {p.id === room.hostPlayerId ? " · host" : ""}
+              {p.kind === "bot" ? " · bot" : ""}
+            </li>
+          ))}
+        </ul>
+        {me && session.playerId === room.hostPlayerId ? (
+          <>
+            <button
+              className="btn ghost"
+              style={{ marginBottom: 10 }}
+              onClick={() => send({ type: "room:addBot" })}
+            >
+              Adicionar bot
+            </button>
+            <button
+              className="btn"
+              disabled={room.players.length < 2}
+              onClick={() => send({ type: "room:start" })}
+            >
+              Começar
+            </button>
+          </>
+        ) : (
+          <p>Esperando o host…</p>
+        )}
+      </div>
+      <Toast message={toast} />
     </main>
   );
 }
 
-function winnersLabel(room: PublicRoom) {
-  const ids = room.game?.winnerIds ?? [];
-  const names = ids.map((id) => room.players.find((p) => p.id === id)?.nick ?? id);
-  if (names.length > 1) return `Empate: ${names.join(", ")}`;
-  return `Venceu ${names[0] ?? "alguém"}`;
+function ScoreList({ room, padded }: { room: PublicRoom; padded?: boolean }) {
+  const rows: (PublicPlayer | null)[] = padded
+    ? Array.from({ length: MAX_PLAYERS }, (_, i) => room.players[i] ?? null)
+    : room.players;
+  return (
+    <div className={`score ${padded ? "score-fixed" : ""}`}>
+      {rows.map((p, i) =>
+        p ? (
+          <div key={p.id} className="score-row">
+            <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+            <span className="score-nick">{p.nick}</span>
+            <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
+          </div>
+        ) : (
+          <div key={`empty-${i}`} className="score-row score-row-empty" />
+        ),
+      )}
+    </div>
+  );
+}
+
+function Results({ room }: { room: PublicRoom }) {
+  const winnerIds = new Set(room.game?.winnerIds ?? []);
+  const ranked = [...room.players].sort(
+    (a, b) => (room.game?.scores[b.id] ?? 0) - (room.game?.scores[a.id] ?? 0),
+  );
+  const winnerNames = ranked.filter((p) => winnerIds.has(p.id));
+  const draw = winnerNames.length > 1;
+
+  return (
+    <div className="card results">
+      <h2>Fim de jogo</h2>
+      <p className="results-title">{draw ? "Empate" : "Venceu"}</p>
+      <ul className="results-winners">
+        {winnerNames.map((p) => (
+          <li key={p.id}>
+            <span className="dot dot-lg" style={{ background: COLOR_HEX[p.color] }} />
+            {p.nick}
+          </li>
+        ))}
+      </ul>
+      <ScoreList room={{ ...room, players: ranked }} />
+      <a className="btn" href="/">
+        Nova sala
+      </a>
+      <a className="text-link" href="/regras" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
+        Regras
+      </a>
+    </div>
+  );
+}
+
+function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, [deadlineAt]);
+
+  const leftMs = Math.max(0, deadlineAt - now);
+  const leftSec = Math.ceil(leftMs / 1000);
+  const frac = Math.max(0, Math.min(1, leftMs / TURN_TIMEOUT_MS));
+  const r = 15;
+  const c = 2 * Math.PI * r;
+
+  return (
+    <div className="timer">
+      <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+        <circle cx="20" cy="20" r={r} fill="none" stroke="#3d3228" strokeWidth="3" />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="var(--accent-2)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - frac)}
+          transform="rotate(-90 20 20)"
+        />
+      </svg>
+      <span className="timer-num" aria-live="polite">
+        {leftSec}s
+      </span>
+    </div>
+  );
 }

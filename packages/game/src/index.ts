@@ -86,10 +86,8 @@ export function applyMove(
     }
   }
 
-  if (completedSquares.length === 0) {
-    next.currentPlayerIndex =
-      (next.currentPlayerIndex + 1) % next.playerIds.length;
-  }
+  next.currentPlayerIndex =
+    (next.currentPlayerIndex + 1) % next.playerIds.length;
 
   if (remainingEdges(next) === 0) {
     next.status = "finished";
@@ -97,6 +95,21 @@ export function applyMove(
   }
 
   return { state: next, completedSquares };
+}
+
+export function pickRandomMove(
+  state: GameState,
+  random: () => number = () => 0,
+): Edge {
+  const legal = listLegalEdges(state);
+  if (legal.length === 0) {
+    throw new GameError("illegal_move");
+  }
+  const index = Math.min(
+    legal.length - 1,
+    Math.max(0, Math.floor(random() * legal.length)),
+  );
+  return legal[index];
 }
 
 export function pickBotMove(

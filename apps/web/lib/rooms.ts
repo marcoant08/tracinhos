@@ -6,13 +6,17 @@ import {
   applyMove,
   createGame,
   pickBotMove,
+  pickRandomMove,
   type GameState,
 } from "@tracinhos/game";
 import {
+  BOT_THINK_MAX_MS,
+  BOT_THINK_MIN_MS,
   COLOR_IDS,
   DISCONNECT_TO_BOT_MS,
   ROOM_CODE_ALPHABET,
   ROOM_TTL_SECONDS,
+  TURN_TIMEOUT_MS,
   isColorId,
   isValidNick,
   nickKey,
@@ -21,6 +25,7 @@ import {
   type PlayerKind,
   type PublicRoom,
   type RoomStatus,
+  type ServerMessage,
   type Session,
 } from "@tracinhos/shared";
 import { RoomError } from "./errors";
@@ -42,11 +47,13 @@ export type Room = {
   hostPlayerId: string;
   players: Seat[];
   game: GameState | null;
+  turnDeadlineAt: number | null;
   createdAt: number;
   updatedAt: number;
 };
 
 export function toPublic(room: Room): PublicRoom {
+  const seat = currentSeat(room);
   return {
     code: room.code,
     size: room.size,
@@ -62,6 +69,10 @@ export function toPublic(room: Room): PublicRoom {
     takenNicks: room.players.map((p) => nickKey(p.nick)),
     takenColors: room.players.map((p) => p.color),
     game: room.game,
+    turnDeadlineAt:
+      room.status === "playing" && seat?.kind === "human"
+        ? (room.turnDeadlineAt ?? null)
+        : null,
   };
 }
 
@@ -100,6 +111,7 @@ export async function createRoom(input: {
       },
     ],
     game: null,
+    turnDeadlineAt: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -209,9 +221,10 @@ export async function startRoom(code: string, actorId: string): Promise<PublicRo
       room.size,
       room.players.map((p) => p.id),
     );
+    refreshTurnDeadline(room);
     return {};
   });
-  queueBotTurns(code);
+  armClocks(code, result.room);
   return result.room;
 }
 
@@ -224,6 +237,8 @@ export async function drawEdge(
     if (room.status !== "playing" || !room.game) {
       throw new RoomError("illegal_move");
     }
+    const timedOut = expireIfNeeded(room);
+    if (timedOut) return { skipped: true, timedOut };
     try {
       room.game = applyMove(room.game, actorId, edge).state;
     } catch (error) {
@@ -232,9 +247,11 @@ export async function drawEdge(
       throw new RoomError("illegal_move");
     }
     if (room.game.status === "finished") room.status = "finished";
-    return {};
+    refreshTurnDeadline(room);
+    return { skipped: false, timedOut: null };
   });
-  queueBotTurns(code);
+  armClocks(code, result.room);
+  if (result.timedOut) publishTimeoutNotice(code, result.timedOut);
   return result.room;
 }
 
@@ -266,9 +283,10 @@ export async function promoteDisconnectedToBot(
       const seat = next.players.find((p) => p.id === playerId);
       if (!seat || seat.kind === "bot" || seat.connected) return {};
       seat.kind = "bot";
+      refreshTurnDeadline(next);
       return {};
     });
-    queueBotTurns(code);
+    armClocks(code, result.room);
     return result.room;
   } catch (error) {
     if (error instanceof RoomError && error.code === "room_not_found") return null;
@@ -422,8 +440,98 @@ function sweep(room: Room): Room {
   return room;
 }
 
-const BOT_TURN_MS = 750;
 const botTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const turnSkipTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const skipGens = new Map<string, number>();
+
+function currentSeat(room: Room): Seat | null {
+  if (room.status !== "playing" || !room.game || room.game.status !== "playing") {
+    return null;
+  }
+  const id = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
+  return room.players.find((p) => p.id === id) ?? null;
+}
+
+function refreshTurnDeadline(room: Room) {
+  const seat = currentSeat(room);
+  room.turnDeadlineAt =
+    seat?.kind === "human" ? Date.now() + TURN_TIMEOUT_MS : null;
+}
+
+function expireIfNeeded(room: Room): { playerId: string; nick: string } | null {
+  if (!room.turnDeadlineAt || Date.now() < room.turnDeadlineAt) return null;
+  const seat = currentSeat(room);
+  if (!seat || seat.kind !== "human" || !room.game) return null;
+  room.game = applyMove(room.game, seat.id, pickRandomMove(room.game, Math.random)).state;
+  if (room.game.status === "finished") room.status = "finished";
+  refreshTurnDeadline(room);
+  return { playerId: seat.id, nick: seat.nick };
+}
+
+function publishTimeoutNotice(code: string, timedOut: { playerId: string; nick: string }) {
+  const message: ServerMessage = {
+    type: "game:notice",
+    notice: "timeout_draw",
+    playerId: timedOut.playerId,
+    nick: timedOut.nick,
+  };
+  void getStore()
+    .publish(`room:${normalizeCode(code)}`, JSON.stringify(message))
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+function clearTurnSkip(code: string) {
+  const timer = turnSkipTimers.get(code);
+  if (timer) clearTimeout(timer);
+  turnSkipTimers.delete(code);
+}
+
+function armClocks(code: string, room: PublicRoom) {
+  const normalized = normalizeCode(code);
+  const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
+  const current = room.players.find((p) => p.id === currentId);
+  if (room.status === "playing" && room.game?.status === "playing" && current?.kind === "bot") {
+    queueBotTurns(normalized);
+  }
+  scheduleTurnSkip(normalized, room);
+}
+
+function scheduleTurnSkip(code: string, room: PublicRoom) {
+  clearTurnSkip(code);
+  const gen = (skipGens.get(code) ?? 0) + 1;
+  skipGens.set(code, gen);
+  if (!room.turnDeadlineAt || room.status !== "playing") return;
+  const wait = Math.max(0, room.turnDeadlineAt - Date.now());
+  turnSkipTimers.set(
+    code,
+    setTimeout(() => {
+      if (skipGens.get(code) !== gen) return;
+      turnSkipTimers.delete(code);
+      void expireTurn(code);
+    }, wait),
+  );
+}
+
+async function expireTurn(code: string): Promise<void> {
+  try {
+    const result = await mutate(code, async (room) => {
+      const timedOut = expireIfNeeded(room);
+      return { timedOut };
+    });
+    if (result.timedOut) publishTimeoutNotice(code, result.timedOut);
+    armClocks(code, result.room);
+  } catch (error) {
+    if (error instanceof RoomError && error.code === "room_not_found") return;
+    console.error(error);
+  }
+}
+
+function botThinkDelay() {
+  const span = BOT_THINK_MAX_MS - BOT_THINK_MIN_MS;
+  return BOT_THINK_MIN_MS + Math.floor(Math.random() * (span + 1));
+}
 
 export function queueBotTurns(code: string) {
   const normalized = normalizeCode(code);
@@ -433,7 +541,7 @@ export function queueBotTurns(code: string) {
     setTimeout(() => {
       botTimers.delete(normalized);
       void playOneBotMove(normalized);
-    }, BOT_TURN_MS),
+    }, botThinkDelay()),
   );
 }
 
@@ -454,11 +562,12 @@ async function playOneBotMove(code: string): Promise<void> {
       if (!player || player.kind !== "bot") return { again: false };
       room.game = applyMove(room.game, player.id, pickBotMove(room.game, Math.random)).state;
       if (room.game.status === "finished") room.status = "finished";
+      refreshTurnDeadline(room);
       const nextId = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
       const next = room.players.find((p) => p.id === nextId);
       return { again: room.game.status === "playing" && next?.kind === "bot" };
     });
-    if (result.again) queueBotTurns(code);
+    armClocks(code, result.room);
   } catch (error) {
     if (error instanceof RoomError && error.code === "room_not_found") return;
     console.error(error);

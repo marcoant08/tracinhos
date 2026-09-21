@@ -23,6 +23,7 @@ export function ColorPicker({
             role="option"
             aria-label={id}
             aria-selected={value === id}
+            aria-disabled={busy}
             data-selected={value === id}
             disabled={busy}
             style={{ background: COLOR_HEX[id] }}

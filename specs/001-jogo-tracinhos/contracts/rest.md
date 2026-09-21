@@ -29,7 +29,7 @@ Snapshot público da sala (sem tokens).
 
 ## `POST /api/rooms`
 
-Cria sala e senta o host.
+Cria sala e coloca o host nela.
 
 **Body**
 

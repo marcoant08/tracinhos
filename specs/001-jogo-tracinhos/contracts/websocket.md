@@ -22,6 +22,7 @@ Join/resume também podem ter ocorrido via REST; nesse caso o cliente já tem `s
 { "type": "session", "session": { "playerId": "p1", "seatToken": "opaque", "nick": "Ana", "color": "red", "roomCode": "AB3K" } }
 { "type": "game:state", "room": { "...snapshot público..." } }
 { "type": "game:over", "room": { "...status finished..." } }
+{ "type": "game:notice", "notice": "timeout_draw", "playerId": "p1", "nick": "Ana" }
 { "type": "room:error", "error": "not_your_turn", "message": "Não é a sua vez." }
 { "type": "resumed_elsewhere" }
 ```
@@ -40,4 +41,4 @@ Segunda conexão com o mesmo token: a anterior recebe `resumed_elsewhere` e o se
 
 ## Snapshot
 
-Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`.
+Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`. `turnDeadlineAt` (no snapshot da sala) é epoch ms do fim da vez humana; o cliente deriva os segundos restantes.

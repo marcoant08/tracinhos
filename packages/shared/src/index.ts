@@ -30,6 +30,9 @@ export const NICK_MAX = 16;
 export const DISCONNECT_TO_BOT_MS = 30_000;
 export const ROOM_TTL_SECONDS = 86_400;
 export const SESSION_PREFIX = "tracinhos:session:";
+export const TURN_TIMEOUT_MS = 25_000;
+export const BOT_THINK_MIN_MS = 1_000;
+export const BOT_THINK_MAX_MS = 2_000;
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 export type PlayerKind = "human" | "bot";
@@ -51,6 +54,7 @@ export type PublicRoom = {
   takenNicks: string[];
   takenColors: ColorId[];
   game: GameState | null;
+  turnDeadlineAt: number | null;
 };
 
 export type Session = {
@@ -88,6 +92,7 @@ export type ServerMessage =
   | { type: "session"; session: Session }
   | { type: "game:state"; room: PublicRoom }
   | { type: "game:over"; room: PublicRoom }
+  | { type: "game:notice"; notice: "timeout_draw"; playerId: string; nick: string }
   | { type: "room:error"; error: ApiErrorCode; message: string }
   | { type: "resumed_elsewhere" };
 

@@ -6,7 +6,7 @@ Referências: [domain.md](domain.md), [ui.md](ui.md), [contracts/](contracts/).
 
 ## Atores
 
-- **Visitante**: ainda não sentou.
+- **Visitante**: ainda não entrou na sala.
 - **Jogador**: humano com assento (nick, cor, `playerId`, `seatToken`).
 - **Host**: primeiro jogador da sala; pode adicionar bots e iniciar.
 - **Bot**: assento controlado pelo servidor.
@@ -20,7 +20,7 @@ O visitante escolhe tamanho da grade (`S` de 2 a 10, padrão 5), nick e cor, e c
 **Aceite**
 
 - Recebe um código curto (4 caracteres A–Z e 2–9, sem I/O/0/1).
-- É redirecionado para `/sala/:codigo` já sentado como host.
+- É redirecionado para `/sala/:codigo` já como host.
 - Sessão `{ playerId, seatToken, nick, color, roomCode }` é persistida no `localStorage`.
 - Sem nick válido ou cor da paleta, a sala não é criada.
 
@@ -68,6 +68,8 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 - Com 1 participante, iniciar falha (`not_enough_players`).
 - Ao iniciar, status vira `playing` e todos recebem o snapshot do tabuleiro vazio.
 - Ordem dos turnos = ordem de assento (join / bots na sequência em que entraram).
+- “Copiar link” copia `{origin}/sala/{codigo}`, não só o código de 4 letras.
+- No join pelo link, o botão visível é **Entrar** (não “Sentar”).
 
 ### 6. Jogar
 
@@ -83,10 +85,12 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Tocar de novo a origem cancela a seleção.
 - Traço já existente: esse par **não** aparece como destino e `game:draw` recusa `illegal_move`.
 - Jogada fora da vez: `not_your_turn`; a seleção some quando não é a sua vez.
-- Fechar 1 quadrado: marca com a cor do jogador, +1 ponto, mesma pessoa joga de novo.
-- Fechar 2 quadrados no mesmo traço: marca os dois, +2, **uma** jogada extra.
-- Sem fechar: a vez passa ao próximo.
-- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, com pausa visível (~0,75s) para o HUD mostrar de quem é a vez. Guloso: fecha se puder; senão aleatório.
+- Fechar 1 quadrado: marca com a cor do jogador, +1 ponto; **a vez passa** ao próximo.
+- Fechar 2 quadrados no mesmo traço: marca os dois, +2; **a vez passa** ao próximo.
+- Sempre há **alternância**: quem acabou de jogar não joga de novo em seguida (mesmo fechando quadrado).
+- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de uma pausa visível de **1–2 s** (`BOT_THINK_MIN_MS`–`BOT_THINK_MAX_MS`). Guloso: fecha se puder; senão aleatório. Também só um traço e passa.
+- Humano na vez tem **25 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**, a vez passa, e todos veem um toast avisando.
+- O prazo é do servidor (`turnDeadlineAt` na sala). F5 e reconectar mostram o tempo restante, não 25 s de novo.
 
 ### 7. Fim
 
@@ -97,7 +101,7 @@ Quando não restam arestas livres, a partida termina.
 - Vence quem tem mais quadrados.
 - Empate: todos com a pontuação máxima empatada são vencedores.
 - Snapshot `finished` + lista de `winnerIds`.
-- Placar mostra nick + cor + pontos.
+- A UI **sai do tabuleiro** e mostra a **tela de resultado**: placar completo (nick + cor + pontos) e o(s) nome(s) do vencedor em destaque. Empate: destaca todos os empatados.
 
 ### 8. Desconexão
 
@@ -116,9 +120,12 @@ Fluxo completo cabe e é usável em ~360×640.
 **Aceite**
 
 - Botões e seletor de cor com área de toque ≥ 44px.
-- HUD (vez, placar, “sua vez”) permanece visível com grade 10×10.
-- Grade grande: pan e pinch-zoom; dá para acertar um traço sem o vizinho.
+- HUD (vez, placar, tempo, “sua vez”) permanece visível e **com altura fixa** (não empurra o tabuleiro quando o texto muda).
+- Todos os pontos da grade cabem na tela de uma vez; o tabuleiro escala para o espaço abaixo do HUD.
 - Sem ação essencial só no hover.
+- Erros e o aviso de timeout (traço aleatório) em toast no canto superior direito.
+- Botão reage ao toque (animação CSS de pressionar).
+- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout). Link a partir do lobby.
 
 ## Fora de escopo
 

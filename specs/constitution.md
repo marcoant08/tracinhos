@@ -25,7 +25,7 @@ Princípios permanentes da v1. Mudar um item aqui é uma decisão de produto, n�
 
 ## Identidade na sala
 
-- Nick e cor são obrigatórios para sentar.
+- Nick e cor são obrigatórios para entrar na sala.
 - Nick e cor são únicos por sala (nick sem diferenciar maiúsculas).
 - Cor só da paleta fixa. Depois que a partida começa, identidade não muda.
 
@@ -33,7 +33,7 @@ Princípios permanentes da v1. Mudar um item aqui é uma decisão de produto, n�
 
 - Viewport alvo ~360×640. Desktop é ampliação.
 - Nada crítico depende de hover.
-- Grade grande usa pan/zoom; HUD da partida não some.
+- Na partida, o tabuleiro inteiro (todos os pontos) cabe na tela; o HUD não some e não muda de altura.
 
 ## Deploy
 
