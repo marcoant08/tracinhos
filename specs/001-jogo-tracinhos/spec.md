@@ -71,6 +71,7 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 - “Adicionar bot” **desabilitado** com 5 assentos (`MAX_PLAYERS`); o servidor ainda recusa `room_full`.
 - Com 1 participante, iniciar falha (`not_enough_players`).
 - Ao iniciar, status vira `playing` e todos recebem o snapshot do tabuleiro vazio.
+- Lista de quem já está na sala (host e join) atualiza **sozinha** quando entra gente ou bot — sem F5.
 - Ordem dos turnos = ordem de assento (join / bots na sequência em que entraram).
 - “Copiar link” copia `{origin}/sala/{codigo}`, não só o código de 4 letras.
 - No join pelo link, o botão visível é **Entrar** (não “Sentar”).
@@ -88,7 +89,7 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Segundo ponto que não é vizinho imediato: não desenha; se o ponto clicado tiver vizinhos livres, passa a ser a nova origem.
 - Tocar de novo a origem cancela a seleção.
 - Traço já existente: esse par **não** aparece como destino e `game:draw` recusa `illegal_move`.
-- Jogada fora da vez: `not_your_turn`; a seleção some quando não é a sua vez.
+- Jogada fora da vez: `not_your_turn`; a seleção some quando não é a sua vez. A tela de “sua vez” e o clique seguem o snapshot do servidor (não um lance local ainda não confirmado).
 - Fechar 1 quadrado: marca com a cor do jogador, +1 ponto; **quem fechou é obrigado a traçar de novo** (mesma vez).
 - Fechar 2 quadrados no mesmo traço: marca os dois, +2; **também joga de novo**.
 - Sem fechar quadrado: a vez **passa** ao próximo. Alternância só nesse caso.

@@ -41,4 +41,4 @@ Segunda conexão com o mesmo token: a anterior recebe `resumed_elsewhere` e o se
 
 ## Snapshot
 
-Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`. `turnDeadlineAt` (no snapshot da sala) é epoch ms do fim desta vez (humano 25 s ou bot 1 s); o cliente deriva os segundos restantes.
+Idêntico ao GET REST. Sem `seatToken`. `game.scores` e `owners` usam `playerId`. `turnDeadlineAt` (no snapshot da sala) é epoch ms do fim desta vez (humano 25 s ou bot 1 s); o cliente deriva os segundos restantes. `updatedAt` evita um GET atrasado sobrescrever um snapshot mais novo.

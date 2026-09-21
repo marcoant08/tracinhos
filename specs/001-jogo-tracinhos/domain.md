@@ -16,6 +16,7 @@ Motor puro. Sem I/O. Implementação: `packages/game`.
 | `TURN_TIMEOUT_MS` | 25000 |
 | `BOT_THINK_MS` | 1000 |
 | `RESULT_HOLD_MS` | 3000 |
+| `LOBBY_POLL_MS` | 1000 |
 | `ROOM_TTL_SECONDS` | 86400 |
 
 Paleta de cores (ids estáveis):
@@ -66,7 +67,7 @@ status: "playing" | "finished"
 winnerIds: string[]       // vazio enquanto playing
 ```
 
-`turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`.
+`turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`. `updatedAt` (snapshot público) é epoch ms da última mutação.
 
 `createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. A sala define o prazo no `start` e a cada lance.
 

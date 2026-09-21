@@ -60,29 +60,35 @@ function send(socket: SocketLike, message: ServerMessage) {
   }
 }
 
+function roomKey(code: string) {
+  return code.trim().toUpperCase();
+}
+
 function addToRoom(roomCode: string, socket: SocketLike) {
-  const set = byRoom.get(roomCode) ?? new Set();
+  const code = roomKey(roomCode);
+  const set = byRoom.get(code) ?? new Set();
   set.add(socket);
-  byRoom.set(roomCode, set);
-  if (!subscribed.has(roomCode)) {
+  byRoom.set(code, set);
+  if (!subscribed.has(code)) {
     subscribed.set(
-      roomCode,
-      getStore().subscribe(`room:${roomCode}`, (_ch, raw) => {
+      code,
+      getStore().subscribe(`room:${code}`, (_ch, raw) => {
         const payload = JSON.parse(raw) as ServerMessage;
-        for (const peer of byRoom.get(roomCode) ?? []) send(peer, payload);
+        for (const peer of byRoom.get(code) ?? []) send(peer, payload);
       }),
     );
   }
 }
 
 function removeFromRoom(roomCode: string, socket: SocketLike) {
-  const set = byRoom.get(roomCode);
+  const code = roomKey(roomCode);
+  const set = byRoom.get(code);
   if (!set) return;
   set.delete(socket);
   if (set.size === 0) {
-    byRoom.delete(roomCode);
-    const unsub = subscribed.get(roomCode);
-    subscribed.delete(roomCode);
+    byRoom.delete(code);
+    const unsub = subscribed.get(code);
+    subscribed.delete(code);
     void unsub?.then((fn) => fn());
   }
 }
@@ -171,7 +177,7 @@ export function bindSocket(socket: SocketLike) {
       previous.socket.close();
     }
     if (binding) removeFromRoom(binding.roomCode, socket);
-    binding = { socket, roomCode, playerId, seatToken };
+    binding = { socket, roomCode: roomKey(roomCode), playerId, seatToken };
     byToken.set(seatToken, binding);
     addToRoom(roomCode, socket);
     clearBotAfterDisconnect(seatToken);

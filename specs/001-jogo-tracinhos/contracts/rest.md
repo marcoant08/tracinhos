@@ -19,11 +19,13 @@ Snapshot público da sala (sem tokens).
   ],
   "takenNicks": ["ana"],
   "takenColors": ["red"],
-  "game": null
+  "game": null,
+  "turnDeadlineAt": null,
+  "updatedAt": 1710000000000
 }
 ```
 
-`takenNicks` já em minúsculas (chave de unicidade). `game` é o `GameState` público ou `null`.
+`takenNicks` já em minúsculas (chave de unicidade). `game` é o `GameState` público ou `null`. `updatedAt` é epoch ms da última mutação da sala.
 
 **404** `{ "error": "room_not_found" }`
 

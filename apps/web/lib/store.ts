@@ -18,7 +18,6 @@ function asString(value: unknown): string | null {
 
 class MemoryStore implements Store {
   private data = new Map<string, { value: string; expires: number | null }>();
-  private subs = new Map<string, Set<MessageHandler>>();
 
   private read(key: string): string | null {
     const row = this.data.get(key);
@@ -49,17 +48,16 @@ class MemoryStore implements Store {
   }
 
   async publish(channel: string, message: string) {
-    emit(this.subs, channel, message);
+    emit(channel, message);
   }
 
   async subscribe(channel: string, handler: MessageHandler) {
-    return addSub(this.subs, channel, handler);
+    return addSub(channel, handler);
   }
 }
 
 class UpstashStore implements Store {
   private redis: Redis;
-  private subs = new Map<string, Set<MessageHandler>>();
 
   constructor(url: string, token: string) {
     this.redis = new Redis({ url, token, automaticDeserialization: false });
@@ -83,16 +81,24 @@ class UpstashStore implements Store {
   }
 
   async publish(channel: string, message: string) {
-    emit(this.subs, channel, message);
+    emit(channel, message);
   }
 
   async subscribe(channel: string, handler: MessageHandler) {
-    return addSub(this.subs, channel, handler);
+    return addSub(channel, handler);
   }
 }
 
-function emit(subs: Map<string, Set<MessageHandler>>, channel: string, message: string) {
-  for (const handler of subs.get(channel) ?? []) {
+function getSubs() {
+  const globalBus = globalThis as typeof globalThis & {
+    __tracinhosSubs?: Map<string, Set<MessageHandler>>;
+  };
+  globalBus.__tracinhosSubs ??= new Map();
+  return globalBus.__tracinhosSubs;
+}
+
+function emit(channel: string, message: string) {
+  for (const handler of getSubs().get(channel) ?? []) {
     try {
       handler(channel, message);
     } catch (error) {
@@ -101,11 +107,8 @@ function emit(subs: Map<string, Set<MessageHandler>>, channel: string, message: 
   }
 }
 
-function addSub(
-  subs: Map<string, Set<MessageHandler>>,
-  channel: string,
-  handler: MessageHandler,
-) {
+function addSub(channel: string, handler: MessageHandler) {
+  const subs = getSubs();
   const set = subs.get(channel) ?? new Set();
   set.add(handler);
   subs.set(channel, set);

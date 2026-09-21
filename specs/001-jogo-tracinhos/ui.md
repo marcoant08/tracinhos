@@ -48,12 +48,12 @@ Layout da partida (`playing`): coluna `HUD (altura fixa)` + `tabuleiro (resto da
 
 ### Join (sem sessão)
 
-Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. Cores ocupadas: círculo riscado, `aria-disabled`. Lista “Já na sala: Ana, Bia”. Botão **“Entrar”** (nunca “Sentar”). Join com sucesso grava de novo a preferência.
+Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. Cores ocupadas: círculo riscado, `aria-disabled`. Lista “Já na sala: Ana, Bia” (ao vivo, mesmo GET de 1 s). Botão **“Entrar”** (nunca “Sentar”). Join com sucesso grava de novo a preferência.
 
 ### Lobby (com sessão, status lobby)
 
 - Código grande + botão **“Copiar link”**: copia a URL absoluta da sala (`{origin}/sala/{codigo}`), não só o código. Toast curto “Link copiado”.
-- Lista de jogadores (bolinha da cor **grande** + nick + host/bot).
+- Lista de jogadores (bolinha da cor **grande** + nick + host/bot). Atualiza sozinha quando alguém entra (WS e, **só no lobby**, GET a cada `LOBBY_POLL_MS` / 1 s). Na partida não há poll contínuo.
 - Host: “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), “Começar” (desabilitado se < 2).
 - Não-host: texto “Esperando o host…”.
 
@@ -74,7 +74,7 @@ Abaixo, viewport do tabuleiro:
 - Pontos grandes o bastante para o polegar (escalam com a célula). Traço feito em tinta escura, com um fio mais fino da cor de quem jogou por cima; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
 - **Dois toques:** origem pisca em acento (`#c45c26`); destinos livres piscam em teal (`#1f8a8a`). Sem destino livre, o ponto não vira origem.
 - Clique no segundo ponto válido pinta o traço **na hora** (e o quadrado, se fechou) e envia `game:draw`. O servidor confirma; se rejeitar, o traço some. Extra: dá para traçar de novo sem esperar o round-trip. Traço já existente não é destino.
-- Fora da vez, sem seleção e pontos não reagem a toque de jogada.
+- Fora da vez (pelo snapshot do servidor), sem seleção e pontos não reagem a toque de jogada. O HUD “Sua vez” / “Vez de X” segue o servidor, não o traço otimista — assim um WS atrasado não trava o clique na vez certa.
 - Jogada ilegal ou fora da vez: toast no canto superior direito, sem avançar.
 - Tempo esgotado: o tabuleiro ganha o traço aleatório e um toast anuncia (“Seu tempo acabou…” / “O tempo de {nick} acabou…”).
 

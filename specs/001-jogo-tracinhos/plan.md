@@ -74,4 +74,4 @@ Grava depois de criar ou entrar com sucesso. Independente da sala. Não substitu
 ## Riscos
 
 - `maxDuration` da Vercel fecha o WS: o cliente reconecta e resume.
-- Duas instâncias: pub/sub obrigatório; teste local com um processo é insuficiente para provar fan-out, mas o código de publish é o mesmo.
+- Duas instâncias: o publish in-process não atravessa. **Lobby:** GET a cada `LOBBY_POLL_MS` (1 s), aba visível. **Partida:** sem poll contínuo (WS + GET no reconnect; `updatedAt` evita GET velho).

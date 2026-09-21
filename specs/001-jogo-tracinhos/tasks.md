@@ -33,6 +33,8 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] `/ws` local (server.ts) e na Vercel (upgrade).
 - [x] Tipos do contrato; `resumed_elsewhere`.
 - [x] Cliente: persistir sessão, resume no boot, backoff.
+- [x] Lobby (e o join sem sessão) busca o snapshot a cada `LOBBY_POLL_MS`.
+- [x] Vez/clique pelo snapshot do servidor (traço otimista só pinta). Sem poll contínuo na partida.
 
 ## 5. UI — [ui.md](ui.md)
 

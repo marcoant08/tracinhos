@@ -69,6 +69,7 @@ export function toPublic(room: Room): PublicRoom {
     takenColors: room.players.map((p) => p.color),
     game: room.game,
     turnDeadlineAt: room.status === "playing" ? (room.turnDeadlineAt ?? null) : null,
+    updatedAt: room.updatedAt,
   };
 }
 

@@ -35,6 +35,7 @@ export const TURN_TIMEOUT_MS = 25_000;
 export const BOT_THINK_MS = 1_000;
 export const RESULT_HOLD_MS = 3_000;
 export const BOARD_GLOW_MS = 1_000;
+export const LOBBY_POLL_MS = 1_000;
 
 export const BOT_NICKS = [
   "Jompes",
@@ -71,6 +72,7 @@ export type PublicRoom = {
   takenColors: ColorId[];
   game: GameState | null;
   turnDeadlineAt: number | null;
+  updatedAt: number;
 };
 
 export type Session = {

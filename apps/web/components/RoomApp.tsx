@@ -7,6 +7,7 @@ import {
   BOARD_GLOW_MS,
   COLOR_HEX,
   ERROR_MESSAGES,
+  LOBBY_POLL_MS,
   RESULT_HOLD_MS,
   TURN_TIMEOUT_MS,
   type ColorId,
@@ -51,12 +52,17 @@ export function RoomApp({ code }: { code: string }) {
       const res = await fetch(`/api/rooms/${roomCode}`, { cache: "no-store" });
       if (res.status === 404) {
         setRoom(null);
-        return;
+        return null;
       }
-      if (res.ok) setRoom((await res.json()) as PublicRoom);
+      if (res.ok) {
+        const next = (await res.json()) as PublicRoom;
+        setRoom((prev) => preferRoom(prev, next));
+        return next;
+      }
     } catch {
       /* rede */
     }
+    return undefined;
   }
 
   function send(payload: object) {
@@ -77,6 +83,22 @@ export function RoomApp({ code }: { code: string }) {
     }
     void refreshRoom();
   }, [roomCode]);
+
+  useEffect(() => {
+    if (elsewhere || room === null) return;
+    const waitingLobby = !room || room.status === "lobby";
+    if (!waitingLobby) return;
+    const tick = () => {
+      if (document.visibilityState === "hidden") return;
+      void refreshRoom();
+    };
+    const id = setInterval(tick, LOBBY_POLL_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [elsewhere, roomCode, room === null, room?.status]);
 
   useEffect(() => {
     if (!session || elsewhere) return;
@@ -103,7 +125,7 @@ export function RoomApp({ code }: { code: string }) {
           setSession(message.session);
         }
         if ((message.type === "game:state" || message.type === "game:over") && message.room) {
-          setRoom(message.room);
+          setRoom((prev) => preferRoom(prev, message.room!));
         }
         if (message.type === "game:notice" && message.notice === "timeout_draw") {
           toastMs.current = 3500;
@@ -142,6 +164,7 @@ export function RoomApp({ code }: { code: string }) {
           }),
         );
         flush(ws);
+        void refreshRoom();
       };
       ws.onmessage = (event) => {
         const raw = event.data;
@@ -217,6 +240,21 @@ export function RoomApp({ code }: { code: string }) {
       return next.length === prev.length ? prev : next;
     });
   }, [room]);
+
+  useEffect(() => {
+    if (!pendingEdges.length) return;
+    const t = setTimeout(() => {
+      void refreshRoom().then((next) => {
+        const shown = next ? preferRoom(roomRef.current, next) : roomRef.current;
+        const game = shown?.game;
+        setPendingEdges((prev) => {
+          if (!game) return [];
+          return prev.filter((edge) => edgeTaken(game, edge));
+        });
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [pendingEdges]);
 
   const glowSignal = boardGlow({
     status: room?.status ?? "lobby",
@@ -324,12 +362,13 @@ export function RoomApp({ code }: { code: string }) {
 
   const me = room.players.find((p) => p.id === session.playerId);
   const viewRoom = withPendingMoves(room, session.playerId, pendingEdges);
-  const currentId = viewRoom.game?.playerIds[viewRoom.game.currentPlayerIndex];
-  const current = viewRoom.players.find((p) => p.id === currentId);
-  const myTurn =
-    room.status === "playing" &&
+  const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
+  const current = room.players.find((p) => p.id === currentId);
+  const serverMyTurn = room.status === "playing" && currentId === session.playerId;
+  const localMyTurn =
     viewRoom.game?.status === "playing" &&
-    currentId === session.playerId;
+    viewRoom.game.playerIds[viewRoom.game.currentPlayerIndex] === session.playerId;
+  const myTurn = serverMyTurn || localMyTurn;
   const showBoard = room.status === "playing" || (room.status === "finished" && holdingBoard);
   const timerMs = current?.kind === "bot" ? BOT_THINK_MS : TURN_TIMEOUT_MS;
 
@@ -415,10 +454,7 @@ export function RoomApp({ code }: { code: string }) {
               className="btn ghost"
               style={{ marginBottom: 10 }}
               disabled={room.players.length >= MAX_PLAYERS}
-              onClick={() => {
-                send({ type: "room:addBot" });
-                window.setTimeout(() => void refreshRoom(), 250);
-              }}
+              onClick={() => send({ type: "room:addBot" })}
             >
               Adicionar bot
             </button>
@@ -553,6 +589,12 @@ function useGlowFlash(signal: "green" | "orange" | "red" | null) {
   }, [signal]);
 
   return flash;
+}
+
+function preferRoom(prev: PublicRoom | null | undefined, next: PublicRoom): PublicRoom {
+  if (prev && prev.status !== "lobby" && next.status === "lobby") return prev;
+  if (prev && next.updatedAt < prev.updatedAt) return prev;
+  return next;
 }
 
 function edgeTaken(game: GameState, edge: Edge) {
