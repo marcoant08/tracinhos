@@ -111,8 +111,7 @@ export function RoomApp({ code }: { code: string }) {
 
   useEffect(() => {
     if (elsewhere || room === null) return;
-    const waitingLobby = !room || room.status === "lobby";
-    if (!waitingLobby) return;
+    if (room && room.status !== "lobby" && room.status !== "playing") return;
     const tick = () => {
       if (document.visibilityState === "hidden") return;
       void refreshRoom();

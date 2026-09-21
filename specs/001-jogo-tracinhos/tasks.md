@@ -34,8 +34,8 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] `/ws` local (server.ts) e na Vercel (upgrade).
 - [x] Tipos do contrato; `resumed_elsewhere`.
 - [x] Cliente: persistir sessão, resume no boot, backoff.
-- [x] Lobby (e o join sem sessão) busca o snapshot a cada `LOBBY_POLL_MS`.
-- [x] Vez/clique pelo snapshot do servidor (traço otimista só pinta). Sem poll contínuo na partida.
+- [x] Lobby, join e partida buscam o snapshot a cada `LOBBY_POLL_MS` (Vercel: WS não cruza isolate).
+- [x] Vez/clique pelo snapshot do servidor (traço otimista só pinta).
 
 ## 5. UI — [ui.md](ui.md)
 
@@ -71,6 +71,6 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Placar HUD/resultado: quadrados `□` e traços com bolinhas nas pontas.
 - [x] Cliente segura o tabuleiro `RESULT_HOLD_MS` (3 s) antes do resultado; F5 em `finished` pula.
 - [x] Bot pensa `BOT_THINK_MS` (1 s) **depois de publicar** cada snapshot; `/regras` diz 1 s. Traço do humano pinta na hora (otimista).
-- [x] Traço otimista permanece até o snapshot; sem poll de 1,5 s que apagava o lance.
+- [x] Traço otimista permanece até o snapshot; `preferRoom`/`updatedAt` evita GET velho apagar o lance.
 - [x] Select do lobby: opção **10×15 pontos** (9×14 quadrados); motor e tabuleiro retangulares.
 - [x] Local: `/ws` isolado do upgrade do Next (evita 1006). Lance confirma por REST para o relógio avançar.
