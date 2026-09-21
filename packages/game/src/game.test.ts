@@ -49,7 +49,7 @@ describe("applyMove", () => {
     expect(isLegalEdge(after, { orientation: "h", row: 0, col: 0 })).toBe(false);
   });
 
-  it("fecha 1 quadrado, pontua e passa a vez", () => {
+  it("fecha 1 quadrado, pontua e dá jogada extra", () => {
     let state = createGame(2, ["a", "b"]);
     state = play(state, "a", { orientation: "h", row: 0, col: 0 });
     state = play(state, "b", { orientation: "h", row: 1, col: 0 });
@@ -60,11 +60,11 @@ describe("applyMove", () => {
     expect(result.completedSquares).toEqual([{ row: 0, col: 0 }]);
     expect(result.state.owners[0][0]).toBe("b");
     expect(result.state.scores.b).toBe(1);
-    expect(result.state.currentPlayerIndex).toBe(0);
+    expect(result.state.currentPlayerIndex).toBe(1);
     expect(scoreSumEqualsOwned(result.state)).toBe(true);
   });
 
-  it("fecha 2 quadrados no mesmo traço, soma 2 e passa a vez", () => {
+  it("fecha 2 quadrados no mesmo traço, soma 2 e dá uma extra", () => {
     let state = createGame(2, ["a", "b"]);
     const setup: [string, Edge][] = [
       ["a", { orientation: "h", row: 0, col: 0 }],
@@ -87,7 +87,7 @@ describe("applyMove", () => {
     const result = applyMove(state, "a", { orientation: "v", row: 0, col: 1 });
     expect(result.completedSquares).toHaveLength(2);
     expect(result.state.scores.a).toBe(2);
-    expect(result.state.currentPlayerIndex).toBe(1);
+    expect(result.state.currentPlayerIndex).toBe(0);
     expect(scoreSumEqualsOwned(result.state)).toBe(true);
   });
 
@@ -121,17 +121,17 @@ describe("applyMove", () => {
   it("empate quando as pontuações máximas coincidem", () => {
     let state = createGame(2, ["a", "b"]);
     const script: Edge[] = [
+      { orientation: "v", row: 0, col: 0 },
+      { orientation: "v", row: 0, col: 1 },
+      { orientation: "h", row: 1, col: 0 },
+      { orientation: "v", row: 1, col: 2 },
       { orientation: "h", row: 0, col: 0 },
       { orientation: "h", row: 0, col: 1 },
-      { orientation: "v", row: 0, col: 0 },
-      { orientation: "v", row: 0, col: 2 },
-      { orientation: "h", row: 1, col: 0 },
       { orientation: "h", row: 1, col: 1 },
+      { orientation: "v", row: 0, col: 2 },
       { orientation: "v", row: 1, col: 0 },
-      { orientation: "v", row: 1, col: 2 },
       { orientation: "h", row: 2, col: 0 },
       { orientation: "h", row: 2, col: 1 },
-      { orientation: "v", row: 0, col: 1 },
       { orientation: "v", row: 1, col: 1 },
     ];
     for (const edge of script) {

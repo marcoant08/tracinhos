@@ -6,8 +6,8 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] Constantes, tipos, `createGame` para `S` 2 e 10.
 - [x] `isLegalEdge` / `applyMove`: ilegal, fora da vez.
-- [x] Fecha 1 quadrado, pontua e **passa a vez**.
-- [x] Fecha 2 quadrados no mesmo traço, +2, e **passa a vez**.
+- [x] Fecha 1 quadrado, pontua e **joga de novo**.
+- [x] Fecha 2 quadrados no mesmo traço, +2, e **joga de novo**.
 - [x] Sem fechar: avança turno (2+ jogadores).
 - [x] Fim + vencedor único e empate.
 - [x] `pickBotMove` guloso determinístico (fecha se puder; senão primeira legal).

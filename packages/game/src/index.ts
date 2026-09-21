@@ -86,8 +86,10 @@ export function applyMove(
     }
   }
 
-  next.currentPlayerIndex =
-    (next.currentPlayerIndex + 1) % next.playerIds.length;
+  if (completedSquares.length === 0) {
+    next.currentPlayerIndex =
+      (next.currentPlayerIndex + 1) % next.playerIds.length;
+  }
 
   if (remainingEdges(next) === 0) {
     next.status = "finished";

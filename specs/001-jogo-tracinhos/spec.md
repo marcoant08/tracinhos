@@ -85,11 +85,11 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Tocar de novo a origem cancela a seleção.
 - Traço já existente: esse par **não** aparece como destino e `game:draw` recusa `illegal_move`.
 - Jogada fora da vez: `not_your_turn`; a seleção some quando não é a sua vez.
-- Fechar 1 quadrado: marca com a cor do jogador, +1 ponto; **a vez passa** ao próximo.
-- Fechar 2 quadrados no mesmo traço: marca os dois, +2; **a vez passa** ao próximo.
-- Sempre há **alternância**: quem acabou de jogar não joga de novo em seguida (mesmo fechando quadrado).
-- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de uma pausa visível de **1–2 s** (`BOT_THINK_MIN_MS`–`BOT_THINK_MAX_MS`). Guloso: fecha se puder; senão aleatório. Também só um traço e passa.
-- Humano na vez tem **25 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**, a vez passa, e todos veem um toast avisando.
+- Fechar 1 quadrado: marca com a cor do jogador, +1 ponto; **quem fechou é obrigado a traçar de novo** (mesma vez).
+- Fechar 2 quadrados no mesmo traço: marca os dois, +2; **também joga de novo**.
+- Sem fechar quadrado: a vez **passa** ao próximo. Alternância só nesse caso.
+- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de uma pausa visível de **1–2 s** (`BOT_THINK_MIN_MS`–`BOT_THINK_MAX_MS`). Guloso: fecha se puder; senão aleatório. Se fechar, pensa de novo e joga outra vez.
+- Humano na vez tem **25 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**; se esse traço não fechar quadrado a vez passa; se fechar, a pessoa joga de novo (novo prazo). Todos veem um toast avisando.
 - O prazo é do servidor (`turnDeadlineAt` na sala). F5 e reconectar mostram o tempo restante, não 25 s de novo.
 
 ### 7. Fim

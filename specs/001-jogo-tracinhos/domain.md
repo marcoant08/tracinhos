@@ -85,8 +85,8 @@ Efeitos:
 1. Marca a aresta com o `playerId` de quem jogou.
 2. Para cada quadrado adjacente que passou a ter os 4 lados, define `owners[r][c] = playerId` e incrementa `scores[playerId]`.
 3. Um traço toca no máximo 2 quadrados.
-4. **Sempre** avança `currentPlayerIndex = (currentPlayerIndex + 1) % playerIds.length`, mesmo se fechou quadrado. Quem jogou não joga de novo em seguida.
-5. A sala redefine `turnDeadlineAt = now + TURN_TIMEOUT_MS` para a nova vez humana (ou `null` se a vez for de bot).
+4. Se `completedSquares.length === 0`, avança `currentPlayerIndex = (currentPlayerIndex + 1) % playerIds.length`. Se fechou 1 ou 2 quadrados, o índice **não** avança: quem jogou é obrigado a traçar de novo.
+5. A sala redefine `turnDeadlineAt = now + TURN_TIMEOUT_MS` para a vez humana corrente (a mesma, se houve extra; ou a próxima). `null` se a vez for de bot.
 6. Se não restam arestas `null`, `status = "finished"` e `winnerIds` = todos os `playerId` com score igual ao máximo.
 
 O estado retornado é um novo objeto (imutável para o caller).
@@ -95,7 +95,7 @@ O estado retornado é um novo objeto (imutável para o caller).
 
 `pickRandomMove(state, random?) → edge` — uma aresta legal ao acaso (primeira da lista se `random` omitido, para testes).
 
-Se o humano estoura `TURN_TIMEOUT_MS` sem `game:draw`, a sala aplica `applyMove` com `pickRandomMove` no `playerId` da vez. Há traço e possível ponto; a vez passa. O servidor emite `game:notice` (`timeout_draw`) para o toast.
+Se o humano estoura `TURN_TIMEOUT_MS` sem `game:draw`, a sala aplica `applyMove` com `pickRandomMove` no `playerId` da vez. Há traço e possível ponto; a vez segue a regra de extra (fecha → joga de novo). O servidor emite `game:notice` (`timeout_draw`) para o toast.
 
 ## Bot guloso
 
@@ -113,7 +113,7 @@ Só humano na vez. O relógio é da **sala** (`turnDeadlineAt` no snapshot).
 
 - Cada vez humana tem `TURN_TIMEOUT_MS` (25s).
 - `game:draw` no prazo: aplica e reinicia o prazo da próxima vez.
-- Se `now >= turnDeadlineAt` sem traço: marca um traço aleatório legal no nome de quem estava na vez e passa a vez.
+- Se `now >= turnDeadlineAt` sem traço: marca um traço aleatório legal no nome de quem estava na vez; a vez só passa se esse traço não fechou quadrado.
 - Cliente atrasado: `game:draw` depois do prazo é ignorado (o traço aleatório já entrou); o snapshot e o toast de timeout chegam normalmente.
 - Relógio não corre no `lobby` nem em `finished`. Bot na vez: sem barra de 25s; o delay é o de pensar (até 2s).
 

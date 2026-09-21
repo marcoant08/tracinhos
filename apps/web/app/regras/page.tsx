@@ -37,9 +37,9 @@ export default function RegrasPage() {
       <section className="card rules">
         <h2>Turnos</h2>
         <p>
-          Os traços são <strong>sempre em alternância</strong>. Quem acabou de jogar
-          não joga de novo em seguida — mesmo se fechou um ou dois quadrados. Fechar
-          pontua; a vez passa.
+          Sem fechar quadrado, a vez passa ao próximo. Quem fecha um (ou dois) quadrados
+          pontua e <strong>é obrigado a traçar de novo</strong> — joga outra vez até um
+          traço que não feche.
         </p>
       </section>
 
@@ -48,10 +48,13 @@ export default function RegrasPage() {
         <p>
           Cada humano tem 25 segundos para completar os dois toques. Se o tempo
           acabar sem traço, o jogo marca <strong>um traço aleatório no nome dessa
-          pessoa</strong> (pode até fechar quadrado) e a vez passa. Um aviso aparece
-          no canto da tela.
+          pessoa</strong> (pode até fechar quadrado). Se não fechar, a vez passa; se
+          fechar, essa pessoa joga de novo. Um aviso aparece no canto da tela.
         </p>
-        <p>Bots jogam sozinhos, um traço por vez, depois de pensar 1 a 2 segundos.</p>
+        <p>
+          Bots jogam sozinhos, um traço por vez, depois de pensar 1 a 2 segundos. Se
+          fecharem quadrado, pensam de novo e traçam outra vez.
+        </p>
       </section>
 
       <section className="card rules">
