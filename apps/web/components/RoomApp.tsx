@@ -26,26 +26,34 @@ export function RoomApp({ code }: { code: string }) {
     }
   }
 
+  async function refreshRoom() {
+    try {
+      const res = await fetch(`/api/rooms/${roomCode}`, { cache: "no-store" });
+      if (res.status === 404) {
+        setRoom(null);
+        return;
+      }
+      if (res.ok) setRoom((await res.json()) as PublicRoom);
+    } catch {
+      /* rede */
+    }
+  }
+
   function send(payload: object) {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
-      return;
+    } else {
+      queueRef.current.push(payload);
     }
-    queueRef.current.push(payload);
+    window.setTimeout(() => {
+      void refreshRoom();
+    }, 250);
   }
 
   useEffect(() => {
     setSession(loadSession(roomCode));
-    void fetch(`/api/rooms/${roomCode}`)
-      .then(async (res) => {
-        if (res.status === 404) {
-          setRoom(null);
-          return;
-        }
-        setRoom((await res.json()) as PublicRoom);
-      })
-      .catch(() => setRoom(null));
+    void refreshRoom();
   }, [roomCode]);
 
   useEffect(() => {
@@ -69,7 +77,14 @@ export function RoomApp({ code }: { code: string }) {
         flush(ws);
       };
       ws.onmessage = (event) => {
-        const message = JSON.parse(event.data as string);
+        const raw = event.data;
+        const text =
+          typeof raw === "string"
+            ? raw
+            : raw instanceof ArrayBuffer
+              ? new TextDecoder().decode(raw)
+              : String(raw);
+        const message = JSON.parse(text);
         if (message.type === "session") {
           saveSession(message.session);
           setSession(message.session);
@@ -105,6 +120,14 @@ export function RoomApp({ code }: { code: string }) {
       wsRef.current?.close();
     };
   }, [session?.seatToken, roomCode, elsewhere]);
+
+  useEffect(() => {
+    if (!session || elsewhere || !room || room.status === "finished") return;
+    const timer = window.setInterval(() => {
+      void refreshRoom();
+    }, 800);
+    return () => window.clearInterval(timer);
+  }, [session, elsewhere, room?.status, roomCode]);
 
   useEffect(() => {
     if (!toast) return;

@@ -64,11 +64,14 @@ class MemoryStore implements Store {
 
 class UpstashStore implements Store {
   private redis: Redis;
+  private watcher: Redis;
   private subs = new Map<string, Set<MessageHandler>>();
   private polls = new Map<string, { timer: ReturnType<typeof setInterval>; last: string | null }>();
 
   constructor(url: string, token: string) {
-    this.redis = new Redis({ url, token, automaticDeserialization: false });
+    const options = { url, token, automaticDeserialization: false as const };
+    this.redis = new Redis(options);
+    this.watcher = new Redis(options);
   }
 
   async get(key: string) {
@@ -81,7 +84,7 @@ class UpstashStore implements Store {
 
   async setNxPx(key: string, value: string, pxMs: number) {
     const result = await this.redis.set(key, value, { px: pxMs, nx: true });
-    return result === "OK";
+    return result === "OK" || Boolean(result);
   }
 
   async del(key: string) {
@@ -92,7 +95,13 @@ class UpstashStore implements Store {
     await this.redis.set(`pubsub:${channel}`, message, { ex: 86400 });
     const poll = this.polls.get(channel);
     if (poll) poll.last = message;
-    for (const handler of this.subs.get(channel) ?? []) handler(channel, message);
+    for (const handler of this.subs.get(channel) ?? []) {
+      try {
+        handler(channel, message);
+      } catch (error) {
+        console.error(error);
+      }
+    }
   }
 
   async subscribe(channel: string, handler: MessageHandler) {
@@ -101,7 +110,7 @@ class UpstashStore implements Store {
     this.subs.set(channel, set);
 
     if (!this.polls.has(channel)) {
-      const last = asString(await this.redis.get<string>(`pubsub:${channel}`));
+      const last = asString(await this.watcher.get<string>(`pubsub:${channel}`));
       const timer = setInterval(() => {
         void this.poll(channel);
       }, 400);
@@ -121,7 +130,7 @@ class UpstashStore implements Store {
   private async poll(channel: string) {
     const state = this.polls.get(channel);
     if (!state) return;
-    const value = asString(await this.redis.get<string>(`pubsub:${channel}`));
+    const value = asString(await this.watcher.get<string>(`pubsub:${channel}`));
     if (value !== null && value !== state.last) {
       state.last = value;
       for (const handler of this.subs.get(channel) ?? []) handler(channel, value);

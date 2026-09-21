@@ -291,23 +291,29 @@ async function mutate<T extends Record<string, unknown>>(
     await sleep(40);
   }
   if (!locked) throw new Error("lock_timeout");
+  let extra: T;
+  let publicRoom: PublicRoom;
   try {
     const room = sweep(await mustRoom(normalized));
-    const extra = await fn(room);
+    extra = await fn(room);
     room.updatedAt = Date.now();
     await saveRoom(room);
-    const publicRoom = toPublic(room);
-    await store.publish(
-      `room:${normalized}`,
-      JSON.stringify({
-        type: room.status === "finished" ? "game:over" : "game:state",
-        room: publicRoom,
-      }),
-    );
-    return { ...extra, room: publicRoom };
+    publicRoom = toPublic(room);
   } finally {
     await store.del(lockKey);
   }
+  void store
+    .publish(
+      `room:${normalized}`,
+      JSON.stringify({
+        type: publicRoom.status === "finished" ? "game:over" : "game:state",
+        room: publicRoom,
+      }),
+    )
+    .catch((error) => {
+      console.error(error);
+    });
+  return { ...extra, room: publicRoom };
 }
 
 async function mustRoom(code: string): Promise<Room> {
