@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { COLOR_IDS, type ColorId } from "@tracinhos/shared";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Toast } from "@/components/Toast";
-import { saveSession } from "@/lib/session";
+import { loadIdentity, saveIdentity, saveSession } from "@/lib/session";
 
 export default function HomePage() {
   const router = useRouter();
@@ -15,6 +15,13 @@ export default function HomePage() {
   const [joinCode, setJoinCode] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const pref = loadIdentity();
+    if (!pref) return;
+    setNick(pref.nick);
+    setColor(pref.color);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -36,6 +43,7 @@ export default function HomePage() {
         return;
       }
       saveSession(data.session);
+      saveIdentity({ nick: data.session.nick, color: data.session.color });
       router.push(`/sala/${data.session.roomCode}`);
     } finally {
       setBusy(false);
@@ -67,6 +75,7 @@ export default function HomePage() {
           <label htmlFor="size">Quadrados por lado</label>
           <select
             id="size"
+            className="select-size"
             value={size}
             onChange={(e) => setSize(Number(e.target.value))}
           >

@@ -2,11 +2,16 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { GameState } from "@tracinhos/game";
-import { COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
+import { BOARD_GLOW_MS, COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
 
 const CELL = 56;
 const PAD = 28;
 const DOT_HIT = 22;
+const GLOW_HEX = {
+  green: "#2f9e5f",
+  orange: "#e06b20",
+  red: "#d64545",
+} as const;
 
 type Edge = { orientation: "h" | "v"; row: number; col: number };
 type Point = { row: number; col: number };
@@ -14,10 +19,12 @@ type Point = { row: number; col: number };
 export function Board({
   room,
   canDraw,
+  glow,
   onDraw,
 }: {
   room: PublicRoom;
   canDraw: boolean;
+  glow?: "green" | "orange" | "red" | null;
   onDraw: (edge: Edge) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -109,6 +116,7 @@ export function Board({
   return (
     <div
       className="board-wrap"
+      data-glow={glow ?? undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -117,6 +125,37 @@ export function Board({
       }}
     >
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+        {glow ? (
+          <g key={glow} className="board-glow" style={{ animationDuration: `${BOARD_GLOW_MS}ms` }}>
+            <defs>
+              <radialGradient id="turn-glow" cx="50%" cy="50%" r="68%">
+                <stop offset="35%" stopColor={GLOW_HEX[glow]} stopOpacity="0" />
+                <stop offset="100%" stopColor={GLOW_HEX[glow]} stopOpacity="0.55" />
+              </radialGradient>
+            </defs>
+            <rect
+              x="0"
+              y="0"
+              width={width}
+              height={height}
+              rx="16"
+              fill="url(#turn-glow)"
+              pointerEvents="none"
+            />
+            <rect
+              x="3"
+              y="3"
+              width={width - 6}
+              height={height - 6}
+              rx="13"
+              fill="none"
+              stroke={GLOW_HEX[glow]}
+              strokeWidth="4"
+              opacity="0.9"
+              pointerEvents="none"
+            />
+          </g>
+        ) : null}
         {board.owners.map((row, r) =>
           row.map((owner, c) => {
             if (!owner) return null;

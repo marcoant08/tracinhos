@@ -30,9 +30,25 @@ export const NICK_MAX = 16;
 export const DISCONNECT_TO_BOT_MS = 30_000;
 export const ROOM_TTL_SECONDS = 86_400;
 export const SESSION_PREFIX = "tracinhos:session:";
+export const IDENTITY_KEY = "tracinhos:identity";
 export const TURN_TIMEOUT_MS = 25_000;
-export const BOT_THINK_MIN_MS = 1_000;
-export const BOT_THINK_MAX_MS = 2_000;
+export const BOT_THINK_MS = 1_000;
+export const RESULT_HOLD_MS = 3_000;
+export const BOARD_GLOW_MS = 1_000;
+
+export const BOT_NICKS = [
+  "Jompes",
+  "Babigol",
+  "Daniglover",
+  "Micles",
+  "Cayogre",
+  "Murrycuck",
+  "Gigi",
+  "Fipe",
+  "Pede-serra",
+  "Gilb rick",
+  "Beuberico",
+] as const;
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 export type PlayerKind = "human" | "bot";
@@ -132,4 +148,20 @@ export function isColorId(value: string): value is ColorId {
 
 export function sessionStorageKey(roomCode: string): string {
   return `${SESSION_PREFIX}${roomCode.toUpperCase()}`;
+}
+
+export function pickBotNick(takenNicks: string[], random: () => number = Math.random): string {
+  const taken = new Set(takenNicks.map(nickKey));
+  const free = BOT_NICKS.filter((nick) => !taken.has(nickKey(nick)));
+  if (free.length > 0) {
+    const index = Math.min(free.length - 1, Math.max(0, Math.floor(random() * free.length)));
+    return free[index];
+  }
+  let n = 1;
+  let nick = `Bot ${n}`;
+  while (taken.has(nickKey(nick))) {
+    n += 1;
+    nick = `Bot ${n}`;
+  }
+  return nick;
 }

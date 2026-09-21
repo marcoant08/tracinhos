@@ -10,8 +10,7 @@ import {
   type GameState,
 } from "@tracinhos/game";
 import {
-  BOT_THINK_MAX_MS,
-  BOT_THINK_MIN_MS,
+  BOT_THINK_MS,
   COLOR_IDS,
   DISCONNECT_TO_BOT_MS,
   ROOM_CODE_ALPHABET,
@@ -21,6 +20,7 @@ import {
   isValidNick,
   nickKey,
   normalizeNick,
+  pickBotNick,
   type ColorId,
   type PlayerKind,
   type PublicRoom,
@@ -53,7 +53,6 @@ export type Room = {
 };
 
 export function toPublic(room: Room): PublicRoom {
-  const seat = currentSeat(room);
   return {
     code: room.code,
     size: room.size,
@@ -69,10 +68,7 @@ export function toPublic(room: Room): PublicRoom {
     takenNicks: room.players.map((p) => nickKey(p.nick)),
     takenColors: room.players.map((p) => p.color),
     game: room.game,
-    turnDeadlineAt:
-      room.status === "playing" && seat?.kind === "human"
-        ? (room.turnDeadlineAt ?? null)
-        : null,
+    turnDeadlineAt: room.status === "playing" ? (room.turnDeadlineAt ?? null) : null,
   };
 }
 
@@ -192,12 +188,7 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
     if (room.players.length >= MAX_PLAYERS) throw new RoomError("room_full");
     const color = COLOR_IDS.find((id) => !room.players.some((p) => p.color === id));
     if (!color) throw new RoomError("color_taken");
-    let n = 1;
-    let nick = `Bot ${n}`;
-    while (room.players.some((p) => nickKey(p.nick) === nickKey(nick))) {
-      n += 1;
-      nick = `Bot ${n}`;
-    }
+    const nick = pickBotNick(room.players.map((p) => p.nick));
     room.players.push({
       id: randomUUID(),
       nick,
@@ -338,17 +329,17 @@ async function mutate<T extends Record<string, unknown>>(
     await store.del(lockKey);
   }
   if (dirty) {
-    void store
-      .publish(
+    try {
+      await store.publish(
         `room:${normalized}`,
         JSON.stringify({
           type: publicRoom.status === "finished" ? "game:over" : "game:state",
           room: publicRoom,
         }),
-      )
-      .catch((error) => {
-        console.error(error);
-      });
+      );
+    } catch (error) {
+      console.error(error);
+    }
   }
   return { ...extra, room: publicRoom };
 }
@@ -454,8 +445,13 @@ function currentSeat(room: Room): Seat | null {
 
 function refreshTurnDeadline(room: Room) {
   const seat = currentSeat(room);
-  room.turnDeadlineAt =
-    seat?.kind === "human" ? Date.now() + TURN_TIMEOUT_MS : null;
+  if (seat?.kind === "human") {
+    room.turnDeadlineAt = Date.now() + TURN_TIMEOUT_MS;
+  } else if (seat?.kind === "bot") {
+    room.turnDeadlineAt = Date.now() + BOT_THINK_MS;
+  } else {
+    room.turnDeadlineAt = null;
+  }
 }
 
 function expireIfNeeded(room: Room): { playerId: string; nick: string } | null {
@@ -488,12 +484,20 @@ function clearTurnSkip(code: string) {
   turnSkipTimers.delete(code);
 }
 
+function clearBotTimer(code: string) {
+  const timer = botTimers.get(code);
+  if (timer) clearTimeout(timer);
+  botTimers.delete(code);
+}
+
 function armClocks(code: string, room: PublicRoom) {
   const normalized = normalizeCode(code);
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
   if (room.status === "playing" && room.game?.status === "playing" && current?.kind === "bot") {
-    queueBotTurns(normalized);
+    queueBotTurns(normalized, BOT_THINK_MS);
+  } else {
+    clearBotTimer(normalized);
   }
   scheduleTurnSkip(normalized, room);
 }
@@ -503,6 +507,9 @@ function scheduleTurnSkip(code: string, room: PublicRoom) {
   const gen = (skipGens.get(code) ?? 0) + 1;
   skipGens.set(code, gen);
   if (!room.turnDeadlineAt || room.status !== "playing") return;
+  const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
+  const current = room.players.find((p) => p.id === currentId);
+  if (current?.kind !== "human") return;
   const wait = Math.max(0, room.turnDeadlineAt - Date.now());
   turnSkipTimers.set(
     code,
@@ -528,20 +535,15 @@ async function expireTurn(code: string): Promise<void> {
   }
 }
 
-function botThinkDelay() {
-  const span = BOT_THINK_MAX_MS - BOT_THINK_MIN_MS;
-  return BOT_THINK_MIN_MS + Math.floor(Math.random() * (span + 1));
-}
-
-export function queueBotTurns(code: string) {
+export function queueBotTurns(code: string, waitMs = BOT_THINK_MS) {
   const normalized = normalizeCode(code);
-  if (botTimers.has(normalized)) return;
+  clearBotTimer(normalized);
   botTimers.set(
     normalized,
     setTimeout(() => {
       botTimers.delete(normalized);
       void playOneBotMove(normalized);
-    }, botThinkDelay()),
+    }, waitMs),
   );
 }
 

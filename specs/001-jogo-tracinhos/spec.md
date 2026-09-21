@@ -22,6 +22,8 @@ O visitante escolhe tamanho da grade (`S` de 2 a 10, padrão 5), nick e cor, e c
 - Recebe um código curto (4 caracteres A–Z e 2–9, sem I/O/0/1).
 - É redirecionado para `/sala/:codigo` já como host.
 - Sessão `{ playerId, seatToken, nick, color, roomCode }` é persistida no `localStorage`.
+- Nick e cor do formulário vêm da preferência do aparelho (`tracinhos:identity`); F5 no lobby não zera. Depois de criar com sucesso, essa preferência é gravada.
+- O select de tamanho da grade é grande o bastante para o polegar (maior que um input comum).
 - Sem nick válido ou cor da paleta, a sala não é criada.
 
 ### 2. Entrar na sala
@@ -31,6 +33,7 @@ O visitante informa o código, escolhe nick e cor ainda livres.
 **Aceite**
 
 - A tela mostra nicks já na sala e desabilita cores ocupadas (atualização ao vivo).
+- Nick e cor vêm da preferência do aparelho; se a cor estiver ocupada, permanece visível mas não dá para confirmar até trocar.
 - Servidor recusa `nick_taken` ou `color_taken` (nick comparado sem maiúsculas).
 - Sala cheia (5 assentos) recusa `room_full`.
 - Partida já iniciada recusa novo join (`game_already_started`), exceto resume.
@@ -42,7 +45,7 @@ Nick: 2–16 caracteres após trim. `Ana` e `ana` colidem. Exibição usa o text
 
 Cor: uma das 8 cores da paleta. Sem hex livre.
 
-Bots: nick `Bot 1`, `Bot 2`, … e a primeira cor livre. Host não escolhe cor do bot.
+Bots: nick sorteado de `BOT_NICKS` (array fixo, fácil de editar), sem colidir com nicks já na sala. Se a lista acabar, cai em `Bot 1`, `Bot 2`, …. Primeira cor livre. Host não escolhe nick nem cor do bot.
 
 Depois de `playing`, nick e cor não mudam.
 
@@ -65,6 +68,7 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 **Aceite**
 
 - Não-host não inicia nem adiciona bot (`not_host`).
+- “Adicionar bot” **desabilitado** com 5 assentos (`MAX_PLAYERS`); o servidor ainda recusa `room_full`.
 - Com 1 participante, iniciar falha (`not_enough_players`).
 - Ao iniciar, status vira `playing` e todos recebem o snapshot do tabuleiro vazio.
 - Ordem dos turnos = ordem de assento (join / bots na sequência em que entraram).
@@ -88,9 +92,12 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Fechar 1 quadrado: marca com a cor do jogador, +1 ponto; **quem fechou é obrigado a traçar de novo** (mesma vez).
 - Fechar 2 quadrados no mesmo traço: marca os dois, +2; **também joga de novo**.
 - Sem fechar quadrado: a vez **passa** ao próximo. Alternância só nesse caso.
-- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de uma pausa visível de **1–2 s** (`BOT_THINK_MIN_MS`–`BOT_THINK_MAX_MS`). Guloso: fecha se puder; senão aleatório. Se fechar, pensa de novo e joga outra vez.
+- Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de **1 s visível** (`BOT_THINK_MS`) com o nome dele no HUD. Guloso: fecha se puder; senão aleatório. Se fechar, pensa de novo (mais 1 s) e joga outra vez. Nunca aplica 2 lances de bot no mesmo instante.
 - Humano na vez tem **25 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**; se esse traço não fechar quadrado a vez passa; se fechar, a pessoa joga de novo (novo prazo). Todos veem um toast avisando.
-- O prazo é do servidor (`turnDeadlineAt` na sala). F5 e reconectar mostram o tempo restante, não 25 s de novo.
+- O prazo é do servidor (`turnDeadlineAt` na sala). Vale para **humano e bot** (bot: agora + `BOT_THINK_MS`). F5 e reconectar mostram o tempo restante, não o prazo cheio de novo.
+- Relógio (número + anel) **sempre visível** na vez, inclusive bot.
+- No placar, o nick da vez fica **em negrito** com `👈` depois do nome.
+- Papel da grade: vinheta nas **bordas internas** (cor forte na borda, some no meio). **Acende e apaga uma vez** (~1 s) e volta ao papel. Verde ao começar a sua vez (com mais de 10 s); laranja ao entrar nos últimos 10 s da vez humana; vermelho aos últimos 5 s. Laranja/vermelho valem para todos que olham a sala; o verde só na vez de quem está neste aparelho. Uma cor de cada vez (vermelho > laranja > verde).
 
 ### 7. Fim
 
@@ -100,8 +107,9 @@ Quando não restam arestas livres, a partida termina.
 
 - Vence quem tem mais quadrados.
 - Empate: todos com a pontuação máxima empatada são vencedores.
-- Snapshot `finished` + lista de `winnerIds`.
-- A UI **sai do tabuleiro** e mostra a **tela de resultado**: placar completo (nick + cor + pontos) e o(s) nome(s) do vencedor em destaque. Empate: destaca todos os empatados.
+- Snapshot `finished` + lista de `winnerIds` (o servidor marca o fim na hora).
+- A UI **segura o tabuleiro 3 s** (`RESULT_HOLD_MS`) depois do último traço, para dar tempo de ver o quadrado pintar. Só então troca para a **tela de resultado**: placar completo (nick + cor + pontos) e o(s) nome(s) do vencedor em destaque. Empate: destaca todos os empatados.
+- F5 já em `finished`: vai direto ao resultado (sem a pausa).
 
 ### 8. Desconexão
 
@@ -125,7 +133,7 @@ Fluxo completo cabe e é usável em ~360×640.
 - Sem ação essencial só no hover.
 - Erros e o aviso de timeout (traço aleatório) em toast no canto superior direito.
 - Botão reage ao toque (animação CSS de pressionar).
-- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout). Link a partir do lobby.
+- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout, bot 1 s). Link a partir do lobby.
 
 ## Fora de escopo
 

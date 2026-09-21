@@ -134,6 +134,12 @@ select:focus {
   outline-offset: 1px;
 }
 
+.select-size {
+  min-height: 56px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
 .btn {
   width: 100%;
   min-height: 48px;
@@ -311,10 +317,27 @@ select:focus {
 .score-nick {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.score-nick-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9rem;
+}
+
+.score-row[aria-current="true"] .score-nick-text {
+  font-weight: 800;
+}
+
+.turn-finger {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .score-pts {
@@ -453,5 +476,24 @@ select:focus {
 @keyframes blink-dot {
   50% {
     opacity: 0.25;
+  }
+}
+
+.board-glow {
+  animation: board-glow-flash 1s ease-in-out forwards;
+}
+
+@keyframes board-glow-flash {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }

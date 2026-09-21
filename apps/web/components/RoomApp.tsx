@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { applyMove, MAX_PLAYERS, type Edge, type GameState } from "@tracinhos/game";
 import {
+  BOT_THINK_MS,
+  BOARD_GLOW_MS,
   COLOR_HEX,
-  COLOR_IDS,
   ERROR_MESSAGES,
+  RESULT_HOLD_MS,
   TURN_TIMEOUT_MS,
   type ColorId,
   type PublicRoom,
@@ -13,7 +16,7 @@ import {
 import { Board } from "./Board";
 import { ColorPicker } from "./ColorPicker";
 import { Toast } from "./Toast";
-import { clearSession, loadSession, saveSession } from "@/lib/session";
+import { clearSession, loadIdentity, loadSession, saveIdentity, saveSession } from "@/lib/session";
 
 export function RoomApp({ code }: { code: string }) {
   const roomCode = code.toUpperCase();
@@ -28,7 +31,13 @@ export function RoomApp({ code }: { code: string }) {
   const backoff = useRef(1000);
   const toastMs = useRef(2200);
   const playerIdRef = useRef<string | null>(null);
+  const wasPlayingRef = useRef(false);
+  const [holdingBoard, setHoldingBoard] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const [pendingEdges, setPendingEdges] = useState<Edge[]>([]);
+  const roomRef = useRef(room);
   playerIdRef.current = session?.playerId ?? null;
+  roomRef.current = room;
 
   function flush(ws: WebSocket) {
     while (queueRef.current.length && ws.readyState === WebSocket.OPEN) {
@@ -61,6 +70,11 @@ export function RoomApp({ code }: { code: string }) {
 
   useEffect(() => {
     setSession(loadSession(roomCode));
+    const pref = loadIdentity();
+    if (pref) {
+      setNick(pref.nick);
+      setColor(pref.color);
+    }
     void refreshRoom();
   }, [roomCode]);
 
@@ -101,6 +115,11 @@ export function RoomApp({ code }: { code: string }) {
           );
         }
         if (message.type === "room:error") {
+          setPendingEdges((prev) => {
+            const game = roomRef.current && roomRef.current !== null ? roomRef.current.game : undefined;
+            if (!game) return [];
+            return prev.filter((edge) => edgeTaken(game, edge));
+          });
           if (message.error === "invalid_token" || message.error === "room_not_found") {
             clearSession(roomCode);
             setSession(null);
@@ -165,16 +184,55 @@ export function RoomApp({ code }: { code: string }) {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const freeColor = useMemo(() => {
-    const taken = room?.takenColors ?? [];
-    return COLOR_IDS.find((id) => !taken.includes(id)) ?? "blue";
-  }, [room]);
+  useEffect(() => {
+    if (!room) return;
+    if (room.status === "playing") {
+      wasPlayingRef.current = true;
+      setHoldingBoard(false);
+      return;
+    }
+    if (room.status !== "finished" || !wasPlayingRef.current) {
+      setHoldingBoard(false);
+      return;
+    }
+    setHoldingBoard(true);
+    const t = setTimeout(() => setHoldingBoard(false), RESULT_HOLD_MS);
+    return () => clearTimeout(t);
+  }, [room?.status]);
 
   useEffect(() => {
-    if (!session && room && room.takenColors.includes(color)) {
-      setColor(freeColor);
+    if (room?.status !== "playing" && !holdingBoard) return;
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [room?.status, holdingBoard]);
+
+  useEffect(() => {
+    const game = room?.game;
+    if (!game || room?.status !== "playing") {
+      setPendingEdges((prev) => (prev.length ? [] : prev));
+      return;
     }
-  }, [room, session, color, freeColor]);
+    setPendingEdges((prev) => {
+      const next = prev.filter((edge) => !edgeTaken(game, edge));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [room]);
+
+  const glowSignal = boardGlow({
+    status: room?.status ?? "lobby",
+    myTurn: Boolean(
+      room &&
+        session &&
+        room.status === "playing" &&
+        room.game?.playerIds[room.game.currentPlayerIndex] === session.playerId,
+    ),
+    currentKind: room?.players.find(
+      (p) => p.id === room.game?.playerIds[room.game.currentPlayerIndex],
+    )?.kind,
+    deadlineAt: room?.turnDeadlineAt ?? null,
+    now,
+  });
+  const glow = useGlowFlash(glowSignal);
 
   async function sit() {
     const res = await fetch(`/api/rooms/${roomCode}/join`, {
@@ -188,6 +246,7 @@ export function RoomApp({ code }: { code: string }) {
       return;
     }
     saveSession(data.session);
+    saveIdentity({ nick: data.session.nick, color: data.session.color });
     setSession(data.session);
     setRoom(data.room);
   }
@@ -249,7 +308,7 @@ export function RoomApp({ code }: { code: string }) {
             <label>Sua cor</label>
             <ColorPicker value={color} taken={room.takenColors} onChange={setColor} />
           </div>
-          <button className="btn" onClick={() => void sit()}>
+          <button className="btn" disabled={room.takenColors.includes(color)} onClick={() => void sit()}>
             Entrar
           </button>
         </div>
@@ -264,11 +323,17 @@ export function RoomApp({ code }: { code: string }) {
   }
 
   const me = room.players.find((p) => p.id === session.playerId);
-  const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
-  const current = room.players.find((p) => p.id === currentId);
-  const myTurn = room.status === "playing" && currentId === session.playerId;
+  const viewRoom = withPendingMoves(room, session.playerId, pendingEdges);
+  const currentId = viewRoom.game?.playerIds[viewRoom.game.currentPlayerIndex];
+  const current = viewRoom.players.find((p) => p.id === currentId);
+  const myTurn =
+    room.status === "playing" &&
+    viewRoom.game?.status === "playing" &&
+    currentId === session.playerId;
+  const showBoard = room.status === "playing" || (room.status === "finished" && holdingBoard);
+  const timerMs = current?.kind === "bot" ? BOT_THINK_MS : TURN_TIMEOUT_MS;
 
-  if (room.status === "finished") {
+  if (room.status === "finished" && !holdingBoard) {
     return (
       <main className="page">
         <Results room={room} />
@@ -277,7 +342,7 @@ export function RoomApp({ code }: { code: string }) {
     );
   }
 
-  if (room.status === "playing") {
+  if (showBoard) {
     return (
       <main className="page page-play">
         <div className="hud">
@@ -300,12 +365,22 @@ export function RoomApp({ code }: { code: string }) {
               )}
             </div>
             <div className="timer-slot">
-              {room.turnDeadlineAt ? <TurnTimer deadlineAt={room.turnDeadlineAt} /> : null}
+              {room.turnDeadlineAt ? (
+                <TurnTimer deadlineAt={room.turnDeadlineAt} durationMs={timerMs} />
+              ) : null}
             </div>
           </div>
-          <ScoreList room={room} />
+          <ScoreList room={viewRoom} currentId={currentId} />
         </div>
-        <Board room={room} canDraw={myTurn} onDraw={(edge) => send({ type: "game:draw", edge })} />
+        <Board
+          room={viewRoom}
+          canDraw={myTurn}
+          glow={glow}
+          onDraw={(edge) => {
+            setPendingEdges((prev) => [...prev, edge]);
+            send({ type: "game:draw", edge });
+          }}
+        />
         <Toast message={toast} />
       </main>
     );
@@ -339,6 +414,7 @@ export function RoomApp({ code }: { code: string }) {
             <button
               className="btn ghost"
               style={{ marginBottom: 10 }}
+              disabled={room.players.length >= MAX_PLAYERS}
               onClick={() => {
                 send({ type: "room:addBot" });
                 window.setTimeout(() => void refreshRoom(), 250);
@@ -363,16 +439,26 @@ export function RoomApp({ code }: { code: string }) {
   );
 }
 
-function ScoreList({ room }: { room: PublicRoom }) {
+function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }) {
   return (
     <div className="score">
-      {room.players.map((p) => (
-        <div key={p.id} className="score-row">
-          <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
-          <span className="score-nick">{p.nick}</span>
-          <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
-        </div>
-      ))}
+      {room.players.map((p) => {
+        const isTurn = Boolean(currentId && p.id === currentId);
+        return (
+          <div key={p.id} className="score-row" aria-current={isTurn ? "true" : undefined}>
+            <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+            <span className="score-nick">
+              <span className="score-nick-text">{p.nick}</span>
+              {isTurn ? (
+                <span className="turn-finger" aria-hidden="true">
+                  👈
+                </span>
+              ) : null}
+            </span>
+            <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -408,7 +494,7 @@ function Results({ room }: { room: PublicRoom }) {
   );
 }
 
-function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
+function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs: number }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -418,7 +504,7 @@ function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
 
   const leftMs = Math.max(0, deadlineAt - now);
   const leftSec = Math.ceil(leftMs / 1000);
-  const frac = Math.max(0, Math.min(1, leftMs / TURN_TIMEOUT_MS));
+  const frac = Math.max(0, Math.min(1, leftMs / durationMs));
   const r = 15;
   const c = 2 * Math.PI * r;
 
@@ -447,4 +533,64 @@ function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
       </span>
     </div>
   );
+}
+
+function useGlowFlash(signal: "green" | "orange" | "red" | null) {
+  const [flash, setFlash] = useState<"green" | "orange" | "red" | null>(null);
+  const prev = useRef<"green" | "orange" | "red" | null>(null);
+
+  useEffect(() => {
+    if (!signal) {
+      prev.current = null;
+      setFlash(null);
+      return;
+    }
+    if (prev.current === signal) return;
+    prev.current = signal;
+    setFlash(signal);
+    const t = setTimeout(() => setFlash(null), BOARD_GLOW_MS);
+    return () => clearTimeout(t);
+  }, [signal]);
+
+  return flash;
+}
+
+function edgeTaken(game: GameState, edge: Edge) {
+  return edge.orientation === "h"
+    ? Boolean(game.horizontal[edge.row]?.[edge.col])
+    : Boolean(game.vertical[edge.row]?.[edge.col]);
+}
+
+function withPendingMoves(room: PublicRoom, playerId: string, edges: Edge[]): PublicRoom {
+  if (!edges.length || !room.game) return room;
+  let game = room.game;
+  for (const edge of edges) {
+    try {
+      game = applyMove(game, playerId, edge).state;
+    } catch {
+      break;
+    }
+  }
+  return { ...room, game };
+}
+
+function boardGlow({
+  status,
+  myTurn,
+  currentKind,
+  deadlineAt,
+  now,
+}: {
+  status: PublicRoom["status"];
+  myTurn: boolean;
+  currentKind?: string;
+  deadlineAt: number | null;
+  now: number;
+}): "green" | "orange" | "red" | null {
+  if (status !== "playing" || currentKind !== "human" || !deadlineAt) return null;
+  const left = deadlineAt - now;
+  if (left <= 5_000) return "red";
+  if (left <= 10_000) return "orange";
+  if (myTurn) return "green";
+  return null;
 }

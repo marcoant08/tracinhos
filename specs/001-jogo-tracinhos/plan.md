@@ -61,7 +61,15 @@ Localmente o `server.ts` também atende `/api/*` no mesmo processo do WebSocket,
 { playerId, seatToken, nick, color, roomCode }
 ```
 
-Boot: se existir, `room:resume`. Senão, formulário.
+Boot: se existir, `room:resume`. Senão, formulário (nick/cor de `tracinhos:identity` se houver).
+
+Preferência do aparelho, chave `tracinhos:identity`:
+
+```
+{ nick, color }
+```
+
+Grava depois de criar ou entrar com sucesso. Independente da sala. Não substitui o `seatToken`.
 
 ## Riscos
 

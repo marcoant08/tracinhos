@@ -52,7 +52,7 @@ export default function RegrasPage() {
           fechar, essa pessoa joga de novo. Um aviso aparece no canto da tela.
         </p>
         <p>
-          Bots jogam sozinhos, um traço por vez, depois de pensar 1 a 2 segundos. Se
+          Bots jogam sozinhos, um traço por vez, depois de pensar 1 segundo. Se
           fecharem quadrado, pensam de novo e traçam outra vez.
         </p>
       </section>
@@ -61,7 +61,7 @@ export default function RegrasPage() {
         <h2>Sala</h2>
         <p>
           Até 5 participantes (humanos e bots). O host começa a partida. Recarregar
-          a página (F5) devolve o mesmo assento.
+          a página (F5) devolve você como o mesmo jogador.
         </p>
       </section>
 
