@@ -87,12 +87,13 @@ export function RoomApp({ code }: { code: string }) {
         body: JSON.stringify({ seatToken: token, edge }),
       });
       const data = (await res.json()) as { room?: PublicRoom; message?: string; error?: string };
-      if (!res.ok || !data.room) {
+      const nextRoom = data.room;
+      if (!res.ok || !nextRoom) {
         setPendingEdges((prev) => (prev.length ? prev.slice(0, -1) : prev));
         setToast(data.message ?? ERROR_MESSAGES[(data.error as keyof typeof ERROR_MESSAGES) ?? "illegal_move"]);
         return;
       }
-      setRoom((prev) => preferRoom(prev, data.room));
+      setRoom((prev) => preferRoom(prev, nextRoom));
     } catch {
       send({ type: "game:draw", edge });
     }

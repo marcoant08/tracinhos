@@ -7,6 +7,7 @@ import {
   parseGrid,
   pickBotMove,
   pickRandomMove,
+  type Edge,
   type GameState,
 } from "@tracinhos/game";
 import {
@@ -228,6 +229,21 @@ export async function startRoom(code: string, actorId: string): Promise<PublicRo
   });
   armClocks(code, result.room);
   return result.room;
+}
+
+export function parseDrawEdge(input: unknown): Edge {
+  if (!input || typeof input !== "object") throw new RoomError("illegal_move");
+  const edge = input as { orientation?: unknown; row?: unknown; col?: unknown };
+  if (
+    (edge.orientation !== "h" && edge.orientation !== "v") ||
+    typeof edge.row !== "number" ||
+    typeof edge.col !== "number" ||
+    !Number.isInteger(edge.row) ||
+    !Number.isInteger(edge.col)
+  ) {
+    throw new RoomError("illegal_move");
+  }
+  return { orientation: edge.orientation, row: edge.row, col: edge.col };
 }
 
 export async function drawEdge(

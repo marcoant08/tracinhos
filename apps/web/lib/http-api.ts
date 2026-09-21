@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { actorFromToken, createRoom, drawEdge, getPublicRoom, joinRoom, resumeRoom } from "./rooms";
-import { jsonError, RoomError } from "./errors";
+import { actorFromToken, createRoom, drawEdge, getPublicRoom, joinRoom, parseDrawEdge, resumeRoom } from "./rooms";
+import { jsonError } from "./errors";
 
 export async function handleRest(
   req: IncomingMessage,
@@ -49,20 +49,8 @@ export async function handleRest(
       const body = await readJson(req);
       const code = decodeURIComponent(drawMatch[1]);
       const playerId = await actorFromToken(code, asString(body.seatToken));
-      const edge = body.edge as { orientation?: unknown; row?: unknown; col?: unknown } | undefined;
-      if (
-        (edge?.orientation !== "h" && edge?.orientation !== "v") ||
-        !Number.isInteger(edge.row) ||
-        !Number.isInteger(edge.col)
-      ) {
-        throw new RoomError("illegal_move");
-      }
       return send(res, 200, {
-        room: await drawEdge(code, playerId, {
-          orientation: edge.orientation,
-          row: edge.row,
-          col: edge.col,
-        }),
+        room: await drawEdge(code, playerId, parseDrawEdge(body.edge)),
       });
     }
 

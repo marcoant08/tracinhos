@@ -77,20 +77,22 @@ function keepNextOffGameSocket(
   const rawAdd = server.addListener.bind(server);
   const rawPrepend = server.prependListener.bind(server);
 
+  type OnFn = (event: string | symbol, listener: (...args: unknown[]) => void) => Server;
   const wrap =
-    (add: typeof rawOn) =>
+    (add: OnFn) =>
     (event: string | symbol, listener: (...args: unknown[]) => void) => {
       if (event !== "upgrade") return add(event, listener);
-      return add(event, (request: { url?: string }, socket: unknown, head: unknown) => {
+      return add(event, (...args: unknown[]) => {
+        const request = args[0] as IncomingMessage;
         const pathname = parse(request.url ?? "/").pathname ?? "";
         if (pathname === "/ws") return;
-        listener(request, socket, head);
+        listener(...args);
       });
     };
 
-  server.on = wrap(rawOn) as Server["on"];
-  server.addListener = wrap(rawAdd) as Server["addListener"];
-  server.prependListener = wrap(rawPrepend) as Server["prependListener"];
+  server.on = wrap(rawOn as OnFn) as Server["on"];
+  server.addListener = wrap(rawAdd as OnFn) as Server["addListener"];
+  server.prependListener = wrap(rawPrepend as OnFn) as Server["prependListener"];
   rawOn("upgrade", dispatch);
 }
 
