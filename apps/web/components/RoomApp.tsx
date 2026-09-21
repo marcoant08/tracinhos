@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MAX_PLAYERS } from "@tracinhos/game";
 import {
   COLOR_HEX,
   COLOR_IDS,
   ERROR_MESSAGES,
   TURN_TIMEOUT_MS,
   type ColorId,
-  type PublicPlayer,
   type PublicRoom,
   type Session,
 } from "@tracinhos/shared";
@@ -75,6 +73,46 @@ export function RoomApp({ code }: { code: string }) {
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const ws = new WebSocket(`${proto}://${location.host}/ws`);
       wsRef.current = ws;
+      ws.binaryType = "arraybuffer";
+      function applyServerMessage(message: {
+        type?: string;
+        session?: Session;
+        room?: PublicRoom;
+        notice?: string;
+        playerId?: string;
+        nick?: string;
+        error?: string;
+        message?: string;
+      }) {
+        if (message.type === "session" && message.session) {
+          saveSession(message.session);
+          setSession(message.session);
+        }
+        if ((message.type === "game:state" || message.type === "game:over") && message.room) {
+          setRoom(message.room);
+        }
+        if (message.type === "game:notice" && message.notice === "timeout_draw") {
+          toastMs.current = 3500;
+          const mine = message.playerId === playerIdRef.current;
+          setToast(
+            mine
+              ? "Seu tempo acabou. Um traço aleatório foi marcado no seu nome."
+              : `O tempo de ${message.nick} acabou. Um traço aleatório foi marcado no nome de ${message.nick}.`,
+          );
+        }
+        if (message.type === "room:error") {
+          if (message.error === "invalid_token" || message.error === "room_not_found") {
+            clearSession(roomCode);
+            setSession(null);
+          }
+          toastMs.current = 2200;
+          setToast(message.message ?? ERROR_MESSAGES[message.error as keyof typeof ERROR_MESSAGES]);
+        }
+        if (message.type === "resumed_elsewhere") {
+          setElsewhere(true);
+          ws.close();
+        }
+      }
       ws.onopen = () => {
         backoff.current = 1000;
         ws.send(
@@ -93,35 +131,17 @@ export function RoomApp({ code }: { code: string }) {
             ? raw
             : raw instanceof ArrayBuffer
               ? new TextDecoder().decode(raw)
-              : String(raw);
-        const message = JSON.parse(text);
-        if (message.type === "session") {
-          saveSession(message.session);
-          setSession(message.session);
+              : raw instanceof Blob
+                ? null
+                : String(raw);
+        if (text === null) {
+          void (raw as Blob).text().then((blobText) => applyServerMessage(JSON.parse(blobText)));
+          return;
         }
-        if (message.type === "game:state" || message.type === "game:over") {
-          setRoom(message.room);
-        }
-        if (message.type === "game:notice" && message.notice === "timeout_draw") {
-          toastMs.current = 3500;
-          const mine = message.playerId === playerIdRef.current;
-          setToast(
-            mine
-              ? "Seu tempo acabou. Um traço aleatório foi marcado no seu nome."
-              : `O tempo de ${message.nick} acabou. Um traço aleatório foi marcado no nome de ${message.nick}.`,
-          );
-        }
-        if (message.type === "room:error") {
-          if (message.error === "invalid_token" || message.error === "room_not_found") {
-            clearSession(roomCode);
-            setSession(null);
-          }
-          toastMs.current = 2200;
-          setToast(message.message);
-        }
-        if (message.type === "resumed_elsewhere") {
-          setElsewhere(true);
-          ws.close();
+        try {
+          applyServerMessage(JSON.parse(text));
+        } catch {
+          /* frame inválido */
         }
       };
       ws.onclose = () => {
@@ -283,7 +303,7 @@ export function RoomApp({ code }: { code: string }) {
               {room.turnDeadlineAt ? <TurnTimer deadlineAt={room.turnDeadlineAt} /> : null}
             </div>
           </div>
-          <ScoreList room={room} padded />
+          <ScoreList room={room} />
         </div>
         <Board room={room} canDraw={myTurn} onDraw={(edge) => send({ type: "game:draw", edge })} />
         <Toast message={toast} />
@@ -319,7 +339,10 @@ export function RoomApp({ code }: { code: string }) {
             <button
               className="btn ghost"
               style={{ marginBottom: 10 }}
-              onClick={() => send({ type: "room:addBot" })}
+              onClick={() => {
+                send({ type: "room:addBot" });
+                window.setTimeout(() => void refreshRoom(), 250);
+              }}
             >
               Adicionar bot
             </button>
@@ -340,23 +363,16 @@ export function RoomApp({ code }: { code: string }) {
   );
 }
 
-function ScoreList({ room, padded }: { room: PublicRoom; padded?: boolean }) {
-  const rows: (PublicPlayer | null)[] = padded
-    ? Array.from({ length: MAX_PLAYERS }, (_, i) => room.players[i] ?? null)
-    : room.players;
+function ScoreList({ room }: { room: PublicRoom }) {
   return (
-    <div className={`score ${padded ? "score-fixed" : ""}`}>
-      {rows.map((p, i) =>
-        p ? (
-          <div key={p.id} className="score-row">
-            <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
-            <span className="score-nick">{p.nick}</span>
-            <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
-          </div>
-        ) : (
-          <div key={`empty-${i}`} className="score-row score-row-empty" />
-        ),
-      )}
+    <div className="score">
+      {room.players.map((p) => (
+        <div key={p.id} className="score-row">
+          <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+          <span className="score-nick">{p.nick}</span>
+          <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -408,7 +424,7 @@ function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
 
   return (
     <div className="timer">
-      <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
         <circle cx="20" cy="20" r={r} fill="none" stroke="#3d3228" strokeWidth="3" />
         <circle
           cx="20"
@@ -422,8 +438,11 @@ function TurnTimer({ deadlineAt }: { deadlineAt: number }) {
           strokeDashoffset={c * (1 - frac)}
           transform="rotate(-90 20 20)"
         />
+        <text className="timer-num" x="20" y="20.5" textAnchor="middle" dominantBaseline="middle">
+          {leftSec}s
+        </text>
       </svg>
-      <span className="timer-num" aria-live="polite">
+      <span className="sr-only" aria-live="polite">
         {leftSec}s
       </span>
     </div>

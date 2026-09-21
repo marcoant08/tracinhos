@@ -18,6 +18,7 @@ const handle = app.getRequestHandler();
 
 async function main() {
   await app.prepare();
+  const upgradeHandler = app.getUpgradeHandler();
 
   const server = createServer((req, res) => {
     const parsed = parse(req.url ?? "/", true);
@@ -32,7 +33,9 @@ async function main() {
 
   wss.on("connection", (ws) => {
     bindSocket({
-      send: (data) => ws.send(data),
+      send: (data) => {
+        if (ws.readyState === ws.OPEN) ws.send(data);
+      },
       close: () => ws.close(),
       on: (event, listener) => {
         if (event === "message") {
@@ -52,7 +55,7 @@ async function main() {
       });
       return;
     }
-    socket.destroy();
+    void upgradeHandler(request, socket, head);
   });
 
   startDisconnectSweeper();

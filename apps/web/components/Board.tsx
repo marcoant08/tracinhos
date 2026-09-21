@@ -46,9 +46,10 @@ export function Board({
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
     const scale = Math.min(rect.width / width, rect.height / height);
-    const ox = rect.left + (rect.width - width * scale) / 2;
-    const oy = rect.top + (rect.height - height * scale) / 2;
-    return { x: (clientX - ox) / scale, y: (clientY - oy) / scale };
+    return {
+      x: (clientX - rect.left) / scale,
+      y: (clientY - rect.top) / scale,
+    };
   }
 
   function pointAt(clientX: number, clientY: number): Point | null {
