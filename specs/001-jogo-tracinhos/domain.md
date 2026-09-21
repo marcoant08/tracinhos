@@ -33,7 +33,7 @@ Paleta de cores (ids estáveis):
 `BOT_NICKS` (sala, não o motor) — lista editável de **nomes** para bots. O nick na sala é sempre `Bot {nome}` (ex.: `Bot Jompes`). Sorteia um ainda livre (mesma chave de unicidade do nick humano, já com o prefixo). Esgotou: `Bot 1`, `Bot 2`, ….
 
 ```
-Jompes, Babigol, Daniglover, Micles, Cayogre, Murrycuck, Gigi, Fipe, Pede-serra, Gilb rick, Beuberico, Xandon, Barco, Zuão, Tio Ita, Oliver, Teus, Jiow, Adilex, Bobô, Italiano, Nalbs, Wellbhs, Welcareca, Casca, Bigs
+Jompes, Babigol, Daniglover, Micles, Cayogre, Murrycuck, Gigi, Fipe, Pede-serra, Gilb rick, Beuberico, Xandon, Barco, Zuão, Tio Ita, Oliver, Teus, Jiow, Adilex, Bobô, Italiano, Nalbs, Wellbhs, Welcareca, Casca, Bigs, Tonts
 ```
 
 Código da sala: 4 caracteres do alfabeto `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
@@ -115,13 +115,14 @@ O estado retornado é um novo objeto (imutável para o caller).
 
 Se o humano estoura `TURN_TIMEOUT_MS` sem `game:draw`, a sala aplica `applyMove` com `pickRandomMove` no `playerId` da vez. Há traço e possível ponto; a vez segue a regra de extra (fecha → joga de novo). O servidor emite `game:notice` (`timeout_draw`) para o toast.
 
-## Bot guloso
+## Bot
 
 `pickBotMove(state, random?) → edge`
 
 1. Lista arestas legais.
-2. Se alguma completa pelo menos um quadrado, escolhe uma delas (primeira em ordem H depois V, varredura row-major — determinístico se `random` omitido; testes usam essa ordem).
-3. Senão escolhe aleatória (ou a primeira se `random` omitido, para testes).
+2. Se alguma completa pelo menos um quadrado, escolhe uma delas (primeira em ordem H depois V, varredura row-major — determinístico). Sempre fecha quando pode.
+3. Senão pontua cada legal por quantos quadrados **abertos com 3 lados** o lance deixa (presente para o próximo). Prefere 0. Se todos deixam ≥ 1, escolhe o menor número.
+4. Empate: aleatória entre as melhores (ou a primeira se `random` omitido).
 
 O **servidor** (não o motor) espera **1 s cheio** (`BOT_THINK_MS`) **depois de publicar** a vez do bot, para o HUD e o tabuleiro atualizarem antes do lance. Não usa o tempo que “sobrou” no relógio (isso empilhava vários bots no mesmo frame). Extra (fechou quadrado): espera de novo 1 s.
 

@@ -191,15 +191,29 @@ describe("pickRandomMove", () => {
 });
 
 describe("pickBotMove", () => {
-  it("fecha um quadrado se puder; senão pega a primeira legal", () => {
+  it("fecha um quadrado se puder", () => {
     let state = createGame(2, ["a", "b"]);
     state = play(state, "a", { orientation: "h", row: 0, col: 0 });
     state = play(state, "b", { orientation: "h", row: 1, col: 0 });
     state = play(state, "a", { orientation: "v", row: 0, col: 0 });
     const move = pickBotMove(state);
     expect(move).toEqual({ orientation: "v", row: 0, col: 1 });
+  });
 
-    const fresh = createGame(2, ["a", "b"]);
-    expect(pickBotMove(fresh)).toEqual({ orientation: "h", row: 0, col: 0 });
+  it("evita deixar um quadrado com 3 lados quando há lance seguro", () => {
+    let state = createGame(2, ["a", "b"]);
+    state = play(state, "a", { orientation: "h", row: 1, col: 0 });
+    state = play(state, "b", { orientation: "v", row: 0, col: 0 });
+    const move = pickBotMove(state);
+    expect(move).toEqual({ orientation: "h", row: 0, col: 1 });
+  });
+
+  it("se for obrigado a abrir, escolhe o lance que deixa menos quadrados", () => {
+    const state = createGame(2, ["a", "b"]);
+    for (const row of state.horizontal) {
+      for (let col = 0; col < row.length; col++) row[col] = "x";
+    }
+    const move = pickBotMove(state, () => 0.25);
+    expect(move).toEqual({ orientation: "v", row: 0, col: 2 });
   });
 });

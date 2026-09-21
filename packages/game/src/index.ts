@@ -145,11 +145,23 @@ export function pickBotMove(
     return completing[0];
   }
 
+  let bestGifts = Infinity;
+  const safest: Edge[] = [];
+  for (const edge of legal) {
+    const gifts = countOpenThreesAfter(state, edge);
+    if (gifts < bestGifts) {
+      bestGifts = gifts;
+      safest.length = 0;
+      safest.push(edge);
+    } else if (gifts === bestGifts) {
+      safest.push(edge);
+    }
+  }
   const index = Math.min(
-    legal.length - 1,
-    Math.max(0, Math.floor(random() * legal.length)),
+    safest.length - 1,
+    Math.max(0, Math.floor(random() * safest.length)),
   );
-  return legal[index];
+  return safest[index];
 }
 
 export function listLegalEdges(state: GameState): Edge[] {
@@ -273,6 +285,32 @@ function squareComplete(state: GameState, row: number, col: number): boolean {
     state.vertical[row][col] !== null &&
     state.vertical[row][col + 1] !== null
   );
+}
+
+function sideCount(state: GameState, row: number, col: number): number {
+  return (
+    (state.horizontal[row][col] !== null ? 1 : 0) +
+    (state.horizontal[row + 1][col] !== null ? 1 : 0) +
+    (state.vertical[row][col] !== null ? 1 : 0) +
+    (state.vertical[row][col + 1] !== null ? 1 : 0)
+  );
+}
+
+function countOpenThrees(state: GameState): number {
+  let n = 0;
+  for (let row = 0; row < state.rows; row++) {
+    for (let col = 0; col < state.cols; col++) {
+      if (state.owners[row][col] !== null) continue;
+      if (sideCount(state, row, col) === 3) n += 1;
+    }
+  }
+  return n;
+}
+
+function countOpenThreesAfter(state: GameState, edge: Edge): number {
+  const next = cloneState(state);
+  setDrawn(next, edge, "_");
+  return countOpenThrees(next);
 }
 
 function wouldCompleteAny(state: GameState, edge: Edge): boolean {

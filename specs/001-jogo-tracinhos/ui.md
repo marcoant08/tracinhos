@@ -102,7 +102,7 @@ Quando o snapshot chega `finished`, a UI **permanece na partida 3 s** (`RESULT_H
 
 ## `/regras`
 
-Página estática, mesma visual do lobby. Explica: objetivo, dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 25 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fim. Link de volta ao lobby.
+Página estática, mesma visual do lobby. Explica: objetivo, dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 25 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fecham se puderem e evitam abrir quadrado pro próximo, fim. Link de volta ao lobby.
 
 ## Acessibilidade mínima
 

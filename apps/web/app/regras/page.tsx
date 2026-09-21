@@ -53,7 +53,10 @@ export default function RegrasPage() {
         </p>
         <p>
           Bots jogam sozinhos, um traço por vez, depois de pensar 1 segundo. Se
-          fecharem quadrado, pensam de novo e traçam outra vez.
+          fecharem quadrado, pensam de novo e traçam outra vez. Sempre fecham
+          quando podem; se não puderem, evitam deixar um quadrado quase pronto
+          para o próximo — e, se não tiver jeito, escolhem o traço que abre
+          menos quadrados.
         </p>
       </section>
 

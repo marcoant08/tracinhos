@@ -10,7 +10,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Fecha 2 quadrados no mesmo traço, +2, e **joga de novo**.
 - [x] Sem fechar: avança turno (2+ jogadores).
 - [x] Fim + vencedor único e empate.
-- [x] `pickBotMove` guloso determinístico (fecha se puder; senão primeira legal).
+- [x] `pickBotMove`: fecha se puder; evita 3 lados; se forçado, o lance que deixa menos.
 - [x] Invariante: soma dos scores = quadrados com dono.
 - [x] `countEdgesByPlayer`: soma dos traços = arestas com dono.
 - [x] `turnDeadlineAt` + traço aleatório no nome de quem estoura 25s.

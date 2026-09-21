@@ -64,6 +64,7 @@ export const BOT_NICKS = [
   "Welcareca",
   "Casca",
   "Bigs",
+  "Tonts",
 ] as const;
 
 export type RoomStatus = "lobby" | "playing" | "finished";
