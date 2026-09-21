@@ -2,6 +2,8 @@
 
 URL: `ws(s)://{host}/ws`
 
+No custom server local, o upgrade de `/ws` não pode passar pelo handler do Next: ele casa `app/ws/route.ts` e faz `socket.end()` (1006). O `ws` nativo fica só com `/ws`; o Next fica com HMR.
+
 Mensagens JSON com campo `type`. Uma conexão = no máximo um assento.
 
 ## Cliente → servidor

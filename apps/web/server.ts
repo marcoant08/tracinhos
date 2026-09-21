@@ -1,4 +1,5 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import type { Duplex } from "node:stream";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node:url";
@@ -47,7 +48,10 @@ async function main() {
     });
   });
 
-  server.on("upgrade", (request, socket, head) => {
+  // Next também escuta `upgrade` depois do prepare (HMR e app/ws). Se o
+  // handler dele vê `/ws`, dá socket.end() e o cliente cai com 1006 — o
+  // traço otimista fica na tela e o relógio do servidor continua.
+  keepNextOffGameSocket(server, (request, socket, head) => {
     const { pathname } = parse(request.url ?? "/");
     if (pathname === "/ws") {
       wss.handleUpgrade(request, socket, head, (ws) => {
@@ -63,6 +67,31 @@ async function main() {
   server.listen(port, () => {
     console.log(`Tracinhos em http://localhost:${port}`);
   });
+}
+
+function keepNextOffGameSocket(
+  server: Server,
+  dispatch: (request: IncomingMessage, socket: Duplex, head: Buffer) => void,
+) {
+  const rawOn = server.on.bind(server);
+  const rawAdd = server.addListener.bind(server);
+  const rawPrepend = server.prependListener.bind(server);
+
+  const wrap =
+    (add: typeof rawOn) =>
+    (event: string | symbol, listener: (...args: unknown[]) => void) => {
+      if (event !== "upgrade") return add(event, listener);
+      return add(event, (request: { url?: string }, socket: unknown, head: unknown) => {
+        const pathname = parse(request.url ?? "/").pathname ?? "";
+        if (pathname === "/ws") return;
+        listener(request, socket, head);
+      });
+    };
+
+  server.on = wrap(rawOn) as Server["on"];
+  server.addListener = wrap(rawAdd) as Server["addListener"];
+  server.prependListener = wrap(rawPrepend) as Server["prependListener"];
+  rawOn("upgrade", dispatch);
 }
 
 void main();

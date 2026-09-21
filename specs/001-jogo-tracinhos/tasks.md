@@ -4,7 +4,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 ## 1. Motor (`packages/game`) — [domain.md](domain.md)
 
-- [x] Constantes, tipos, `createGame` para `S` 2 e 10.
+- [x] Constantes, tipos, `createGame` para `S` 2 e 10 e grade 10×15 pontos (`cols=9`, `rows=14`).
 - [x] `isLegalEdge` / `applyMove`: ilegal, fora da vez.
 - [x] Fecha 1 quadrado, pontua e **joga de novo**.
 - [x] Fecha 2 quadrados no mesmo traço, +2, e **joga de novo**.
@@ -71,3 +71,5 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Cliente segura o tabuleiro `RESULT_HOLD_MS` (3 s) antes do resultado; F5 em `finished` pula.
 - [x] Bot pensa `BOT_THINK_MS` (1 s) **depois de publicar** cada snapshot; `/regras` diz 1 s. Traço do humano pinta na hora (otimista).
 - [x] Traço otimista permanece até o snapshot; sem poll de 1,5 s que apagava o lance.
+- [x] Select do lobby: opção **10×15 pontos** (9×14 quadrados); motor e tabuleiro retangulares.
+- [x] Local: `/ws` isolado do upgrade do Next (evita 1006). Lance confirma por REST para o relógio avançar.

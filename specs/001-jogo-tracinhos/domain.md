@@ -7,7 +7,7 @@ Motor puro. Sem I/O. Implementação: `packages/game`.
 | Nome | Valor |
 | --- | --- |
 | `MIN_SIZE` | 2 |
-| `MAX_SIZE` | 10 |
+| `MAX_SIZE` | 14 |
 | `DEFAULT_SIZE` | 5 |
 | `MAX_PLAYERS` | 5 |
 | `NICK_MIN` | 2 |
@@ -40,26 +40,34 @@ Código da sala: 4 caracteres do alfabeto `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
 
 ## Grade
 
-`S` = quadrados por lado, inteiro em `[MIN_SIZE, MAX_SIZE]`.
+A grade pode ser quadrada ou retangular.
 
-`N = S + 1` (pontos por lado).
+`C` = quadrados na horizontal (largura). `R` = quadrados na vertical (altura). Inteiros em `[MIN_SIZE, MAX_SIZE]`.
 
-- Arestas horizontais `H[r][c]`: `r ∈ [0, N)`, `c ∈ [0, S)`. Liga `(c, r)` → `(c+1, r)` em coordenadas (x, y) com y crescendo para baixo.
-- Arestas verticais `V[r][c]`: `r ∈ [0, S)`, `c ∈ [0, N)`. Liga `(c, r)` → `(c, r+1)`.
-- Quadrados `Q[r][c]`: `r,c ∈ [0, S)`. Dono `null` ou `playerId`.
+Pontos: `(C + 1)` de largura × `(R + 1)` de altura.
+
+Presets da UI:
+
+- Quadradas: `C = R` em 2…10 (rótulo `N×N` em quadrados).
+- Retangular: **10 pontos × 15 pontos** ⇒ `C = 9`, `R = 14` (126 quadrados).
+
+- Arestas horizontais `H[r][c]`: `r ∈ [0, R+1)`, `c ∈ [0, C)`. Liga `(c, r)` → `(c+1, r)` em coordenadas (x, y) com y crescendo para baixo.
+- Arestas verticais `V[r][c]`: `r ∈ [0, R)`, `c ∈ [0, C+1)`. Liga `(c, r)` → `(c, r+1)`.
+- Quadrados `Q[r][c]`: `r ∈ [0, R)`, `c ∈ [0, C)`. Dono `null` ou `playerId`.
 
 Uma aresta é um valor `{ orientation: "h" | "v", row: number, col: number }`.
 
-Contagem de arestas: `H = N * S`, `V = S * N`, total `2 * S * (S + 1)`.
-Quadrados: `S * S` (máximo 100).
+Contagem de arestas: horizontais `(R + 1) * C`, verticais `R * (C + 1)`, total `C * (R + 1) + R * (C + 1)`.
+Quadrados: `C * R`.
 
 ## Estado do jogo (`GameState`)
 
 ```
-size: S
-horizontal: (string | null)[][]   // N x S, playerId se desenhada
-vertical: (string | null)[][]     // S x N
-owners: (string | null)[][]  // S x S
+cols: C
+rows: R
+horizontal: (string | null)[][]   // (R+1) x C, playerId se desenhada
+vertical: (string | null)[][]     // R x (C+1)
+owners: (string | null)[][]  // R x C
 playerIds: string[]       // ordem de turno, imutável após start
 currentPlayerIndex: number
 scores: Record<playerId, number>
@@ -69,7 +77,7 @@ winnerIds: string[]       // vazio enquanto playing
 
 `turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`. `updatedAt` (snapshot público) é epoch ms da última mutação.
 
-`createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. A sala define o prazo no `start` e a cada lance.
+`createGame(cols, playerIds, rows = cols)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. A sala define o prazo no `start` e a cada lance.
 
 `countEdgesByPlayer(state)` deriva, das grades `horizontal`/`vertical`, quantos traços cada `playerId` fez. Não mora no `GameState`. Timeout e lance normal incrementam igual (a aresta ganha dono).
 

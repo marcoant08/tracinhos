@@ -1,7 +1,9 @@
 export const MIN_SIZE = 2;
-export const MAX_SIZE = 10;
+export const MAX_SIZE = 14;
 export const DEFAULT_SIZE = 5;
 export const MAX_PLAYERS = 5;
+/** 10 pontos de largura × 15 pontos de altura. */
+export const TALL_GRID = { cols: 9, rows: 14 } as const;
 
 export type Edge = {
   orientation: "h" | "v";
@@ -10,7 +12,8 @@ export type Edge = {
 };
 
 export type GameState = {
-  size: number;
+  cols: number;
+  rows: number;
   horizontal: (string | null)[][];
   vertical: (string | null)[][];
   owners: (string | null)[][];
@@ -31,23 +34,37 @@ export class GameError extends Error {
   }
 }
 
-export function createGame(size: number, playerIds: string[]): GameState {
-  if (size < MIN_SIZE || size > MAX_SIZE || !Number.isInteger(size)) {
-    throw new Error("invalid_size");
-  }
+export function isValidGrid(cols: number, rows: number): boolean {
+  return (
+    Number.isInteger(cols) &&
+    Number.isInteger(rows) &&
+    cols >= MIN_SIZE &&
+    rows >= MIN_SIZE &&
+    cols <= MAX_SIZE &&
+    rows <= MAX_SIZE
+  );
+}
+
+export function parseGrid(cols: number, rows: number): { cols: number; rows: number } {
+  if (!isValidGrid(cols, rows)) throw new Error("invalid_size");
+  return { cols, rows };
+}
+
+export function createGame(cols: number, playerIds: string[], rows = cols): GameState {
+  const grid = parseGrid(cols, rows);
   if (playerIds.length < 2 || playerIds.length > MAX_PLAYERS) {
     throw new Error("invalid_players");
   }
 
-  const n = size + 1;
   const scores: Record<string, number> = {};
   for (const id of playerIds) scores[id] = 0;
 
   return {
-    size,
-    horizontal: emptyEdges(n, size),
-    vertical: emptyEdges(size, n),
-    owners: emptyOwners(size),
+    cols: grid.cols,
+    rows: grid.rows,
+    horizontal: emptyEdges(grid.rows + 1, grid.cols),
+    vertical: emptyEdges(grid.rows, grid.cols + 1),
+    owners: emptyOwners(grid.rows, grid.cols),
     playerIds: [...playerIds],
     currentPlayerIndex: 0,
     scores,
@@ -78,7 +95,7 @@ export function applyMove(
   setDrawn(next, edge, playerId);
 
   const completedSquares: { row: number; col: number }[] = [];
-  for (const sq of adjacentSquares(next.size, edge)) {
+  for (const sq of adjacentSquares(next, edge)) {
     if (next.owners[sq.row][sq.col] === null && squareComplete(next, sq.row, sq.col)) {
       next.owners[sq.row][sq.col] = playerId;
       next.scores[playerId] += 1;
@@ -137,15 +154,14 @@ export function pickBotMove(
 
 export function listLegalEdges(state: GameState): Edge[] {
   const edges: Edge[] = [];
-  const n = state.size + 1;
-  for (let row = 0; row < n; row++) {
-    for (let col = 0; col < state.size; col++) {
+  for (let row = 0; row < state.rows + 1; row++) {
+    for (let col = 0; col < state.cols; col++) {
       const edge: Edge = { orientation: "h", row, col };
       if (isLegalEdge(state, edge)) edges.push(edge);
     }
   }
-  for (let row = 0; row < state.size; row++) {
-    for (let col = 0; col < n; col++) {
+  for (let row = 0; row < state.rows; row++) {
+    for (let col = 0; col < state.cols + 1; col++) {
       const edge: Edge = { orientation: "v", row, col };
       if (isLegalEdge(state, edge)) edges.push(edge);
     }
@@ -182,15 +198,16 @@ function emptyEdges(rows: number, cols: number): (string | null)[][] {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => null));
 }
 
-function emptyOwners(size: number): (string | null)[][] {
-  return Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => null),
+function emptyOwners(rows: number, cols: number): (string | null)[][] {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => null),
   );
 }
 
 function cloneState(state: GameState): GameState {
   return {
-    size: state.size,
+    cols: state.cols,
+    rows: state.rows,
     horizontal: state.horizontal.map((row) => [...row]),
     vertical: state.vertical.map((row) => [...row]),
     owners: state.owners.map((row) => [...row]),
@@ -203,11 +220,20 @@ function cloneState(state: GameState): GameState {
 }
 
 function inBounds(state: GameState, edge: Edge): boolean {
-  const n = state.size + 1;
   if (edge.orientation === "h") {
-    return edge.row >= 0 && edge.row < n && edge.col >= 0 && edge.col < state.size;
+    return (
+      edge.row >= 0 &&
+      edge.row < state.rows + 1 &&
+      edge.col >= 0 &&
+      edge.col < state.cols
+    );
   }
-  return edge.row >= 0 && edge.row < state.size && edge.col >= 0 && edge.col < n;
+  return (
+    edge.row >= 0 &&
+    edge.row < state.rows &&
+    edge.col >= 0 &&
+    edge.col < state.cols + 1
+  );
 }
 
 function isDrawn(state: GameState, edge: Edge): boolean {
@@ -226,15 +252,15 @@ function setDrawn(state: GameState, edge: Edge, playerId: string): void {
 }
 
 function adjacentSquares(
-  size: number,
+  state: GameState,
   edge: Edge,
 ): { row: number; col: number }[] {
   const squares: { row: number; col: number }[] = [];
   if (edge.orientation === "h") {
-    if (edge.row < size) squares.push({ row: edge.row, col: edge.col });
+    if (edge.row < state.rows) squares.push({ row: edge.row, col: edge.col });
     if (edge.row > 0) squares.push({ row: edge.row - 1, col: edge.col });
   } else {
-    if (edge.col < size) squares.push({ row: edge.row, col: edge.col });
+    if (edge.col < state.cols) squares.push({ row: edge.row, col: edge.col });
     if (edge.col > 0) squares.push({ row: edge.row, col: edge.col - 1 });
   }
   return squares;
@@ -252,7 +278,7 @@ function squareComplete(state: GameState, row: number, col: number): boolean {
 function wouldCompleteAny(state: GameState, edge: Edge): boolean {
   const next = cloneState(state);
   setDrawn(next, edge, "_");
-  return adjacentSquares(next.size, edge).some(
+  return adjacentSquares(next, edge).some(
     (sq) => next.owners[sq.row][sq.col] === null && squareComplete(next, sq.row, sq.col),
   );
 }

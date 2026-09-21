@@ -15,7 +15,7 @@ Referências: [domain.md](domain.md), [ui.md](ui.md), [contracts/](contracts/).
 
 ### 1. Criar sala
 
-O visitante escolhe tamanho da grade (`S` de 2 a 10, padrão 5), nick e cor, e cria a sala.
+O visitante escolhe tamanho da grade (quadradas 2×2 a 10×10, ou 10×15 pontos = 9×14 quadrados; padrão 5×5), nick e cor, e cria a sala.
 
 **Aceite**
 

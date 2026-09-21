@@ -64,7 +64,8 @@ export type PublicPlayer = {
 
 export type PublicRoom = {
   code: string;
-  size: number;
+  cols: number;
+  rows: number;
   status: RoomStatus;
   hostPlayerId: string;
   players: PublicPlayer[];
@@ -118,7 +119,7 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   room_not_found: "Sala não encontrada.",
   invalid_nick: "Nick inválido (2 a 16 caracteres).",
   invalid_color: "Escolha uma cor da paleta.",
-  invalid_size: "Tamanho da grade deve ser de 2 a 10.",
+  invalid_size: "Tamanho da grade inválido (2 a 14 quadrados em cada lado).",
   nick_taken: "Esse nick já foi escolhido.",
   color_taken: "Essa cor já foi escolhida.",
   room_full: "A sala já tem 5 jogadores.",

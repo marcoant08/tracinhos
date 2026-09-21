@@ -74,6 +74,30 @@ export function RoomApp({ code }: { code: string }) {
     queueRef.current.push(payload);
   }
 
+  async function submitDraw(edge: Edge) {
+    const token = loadSession(roomCode)?.seatToken;
+    if (!token) {
+      send({ type: "game:draw", edge });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/rooms/${roomCode}/draw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatToken: token, edge }),
+      });
+      const data = (await res.json()) as { room?: PublicRoom; message?: string; error?: string };
+      if (!res.ok || !data.room) {
+        setPendingEdges((prev) => (prev.length ? prev.slice(0, -1) : prev));
+        setToast(data.message ?? ERROR_MESSAGES[(data.error as keyof typeof ERROR_MESSAGES) ?? "illegal_move"]);
+        return;
+      }
+      setRoom((prev) => preferRoom(prev, data.room));
+    } catch {
+      send({ type: "game:draw", edge });
+    }
+  }
+
   useEffect(() => {
     setSession(loadSession(roomCode));
     const pref = loadIdentity();
@@ -401,7 +425,7 @@ export function RoomApp({ code }: { code: string }) {
           glow={glow}
           onDraw={(edge) => {
             setPendingEdges((prev) => [...prev, edge]);
-            send({ type: "game:draw", edge });
+            void submitDraw(edge);
           }}
         />
         <Toast message={toast} />

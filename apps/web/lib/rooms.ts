@@ -1,10 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
+  DEFAULT_SIZE,
   MAX_PLAYERS,
-  MAX_SIZE,
-  MIN_SIZE,
   applyMove,
   createGame,
+  parseGrid,
   pickBotMove,
   pickRandomMove,
   type GameState,
@@ -42,7 +42,8 @@ export type Seat = {
 
 export type Room = {
   code: string;
-  size: number;
+  cols: number;
+  rows: number;
   status: RoomStatus;
   hostPlayerId: string;
   players: Seat[];
@@ -55,7 +56,8 @@ export type Room = {
 export function toPublic(room: Room): PublicRoom {
   return {
     code: room.code,
-    size: room.size,
+    cols: room.cols,
+    rows: room.rows,
     status: room.status,
     hostPlayerId: room.hostPlayerId,
     players: room.players.map((p) => ({
@@ -80,11 +82,17 @@ export async function getPublicRoom(code: string): Promise<PublicRoom> {
 
 export async function createRoom(input: {
   size?: number;
+  cols?: number;
+  rows?: number;
   nick: string;
   color: string;
 }): Promise<{ room: PublicRoom; session: Session }> {
-  const size = input.size ?? 5;
-  if (!Number.isInteger(size) || size < MIN_SIZE || size > MAX_SIZE) {
+  const cols = input.cols ?? input.size ?? DEFAULT_SIZE;
+  const rows = input.rows ?? cols;
+  let grid: { cols: number; rows: number };
+  try {
+    grid = parseGrid(cols, rows);
+  } catch {
     throw new RoomError("invalid_size");
   }
   const nick = parseNick(input.nick);
@@ -94,7 +102,8 @@ export async function createRoom(input: {
   const seatToken = newToken();
   const room: Room = {
     code,
-    size,
+    cols: grid.cols,
+    rows: grid.rows,
     status: "lobby",
     hostPlayerId: playerId,
     players: [
@@ -210,8 +219,9 @@ export async function startRoom(code: string, actorId: string): Promise<PublicRo
     if (room.players.length < 2) throw new RoomError("not_enough_players");
     room.status = "playing";
     room.game = createGame(
-      room.size,
+      room.cols,
       room.players.map((p) => p.id),
+      room.rows,
     );
     refreshTurnDeadline(room);
     return {};
@@ -348,7 +358,13 @@ async function mutate<T extends Record<string, unknown>>(
 async function mustRoom(code: string): Promise<Room> {
   const raw = await getStore().get(roomKey(normalizeCode(code)));
   if (!raw) throw new RoomError("room_not_found");
-  return JSON.parse(raw) as Room;
+  return hydrateRoom(JSON.parse(raw) as Room & { size?: number });
+}
+
+function hydrateRoom(room: Room & { size?: number }): Room {
+  if (typeof room.cols === "number" && typeof room.rows === "number") return room;
+  const side = typeof room.size === "number" ? room.size : DEFAULT_SIZE;
+  return { ...room, cols: side, rows: side };
 }
 
 async function saveRoom(room: Room): Promise<void> {

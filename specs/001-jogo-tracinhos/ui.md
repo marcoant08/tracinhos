@@ -32,7 +32,7 @@ Paleta de jogadores (hex de tela, ids iguais ao domínio):
 Coluna única:
 
 1. Título “Tracinhos”.
-2. Bloco **Criar**: select `S` 2–10 **grande** (min-height **56px**, fonte ≥ **1.15rem**, largura total do card; rótulo “N×N quadrados”, padrão 5×5), nick, grade de 8 cores, botão “Criar sala”.
+2. Bloco **Criar**: select da grade **grande** (min-height **56px**, fonte ≥ **1.15rem**, largura total do card). Opções: quadradas `N×N` de 2 a 10 (rótulo “N×N (k quadrados)”) e **10×15 pontos (126 quadrados)**. Padrão 5×5. Nick, grade de 8 cores, botão “Criar sala”.
 3. Bloco **Entrar**: código (4 chars, auto-maiúsculo), botão “Entrar”.
 4. Link **Regras** → `/regras`.
 
@@ -73,7 +73,7 @@ Abaixo, viewport do tabuleiro:
 - **Vinheta no papel** (bordas internas do SVG/área da grade, não o fundo da página): cor forte na borda, some em direção ao centro (radial). **Acende e apaga uma vez** em ~1 s — o papel volta ao normal. Dispara ao **entrar** em cada estado, não fica ligada o turno inteiro. **Verde** (`#2f9e5f`) ao começar a sua vez com mais de 10 s. **Laranja** (`#e06b20`) quando a vez humana **passa a ter ≤ 10 s**. **Vermelho** (`#d64545`) quando **passa a ter ≤ 5 s**. Uma de cada vez (vermelho substitui laranja, etc.). Vez de outra pessoa ou de bot: sem verde. Sem empurrar layout.
 - Pontos grandes o bastante para o polegar (escalam com a célula). Traço feito em tinta escura, com um fio mais fino da cor de quem jogou por cima; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
 - **Dois toques:** origem pisca em acento (`#c45c26`); destinos livres piscam em teal (`#1f8a8a`). Sem destino livre, o ponto não vira origem.
-- Clique no segundo ponto válido pinta o traço **na hora** (e o quadrado, se fechou) e envia `game:draw`. O traço local **fica** até o snapshot confirmar; se o servidor rejeitar só o último lance em voo, esse some. Sem fechar: não aceita outro clique até confirmar (evita o traço sumir). Extra: dá para traçar de novo sem esperar o round-trip. Traço já existente não é destino.
+- Clique no segundo ponto válido pinta o traço **na hora** (e o quadrado, se fechou) e confirma com `POST /api/rooms/:code/draw` (o HUD/relógio seguem o snapshot da resposta). Se o POST falhar de rede, cai no `game:draw` via WS. O traço local **fica** até o snapshot confirmar; se o servidor rejeitar só o último lance em voo, esse some. Sem fechar: não aceita outro clique até confirmar (evita o traço sumir). Extra: dá para traçar de novo sem esperar o round-trip. Traço já existente não é destino.
 - Fora da vez (pelo snapshot do servidor), sem seleção e pontos não reagem a toque de jogada. O HUD “Sua vez” / “Vez de X” segue o servidor, não o traço otimista — assim um WS atrasado não trava o clique na vez certa.
 - Jogada ilegal ou fora da vez: toast no canto superior direito, sem avançar.
 - Tempo esgotado: o tabuleiro ganha o traço aleatório e um toast anuncia (“Seu tempo acabou…” / “O tempo de {nick} acabou…”).

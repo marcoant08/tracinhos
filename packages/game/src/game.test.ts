@@ -8,6 +8,7 @@ import {
   pickRandomMove,
   scoreSumEqualsOwned,
   countEdgesByPlayer,
+  TALL_GRID,
   type Edge,
   type GameState,
 } from "./index.js";
@@ -26,9 +27,37 @@ describe("createGame", () => {
     expect(small.owners).toHaveLength(2);
 
     const big = createGame(10, ["a", "b"]);
+    expect(big.cols).toBe(10);
+    expect(big.rows).toBe(10);
     expect(big.owners).toHaveLength(10);
     expect(big.owners[0]).toHaveLength(10);
     expect(listLegalEdges(big)).toHaveLength(2 * 10 * 11);
+  });
+
+  it("aceita 10×15 pontos (9×14 quadrados)", () => {
+    const tall = createGame(TALL_GRID.cols, ["a", "b"], TALL_GRID.rows);
+    expect(tall.cols).toBe(9);
+    expect(tall.rows).toBe(14);
+    expect(tall.horizontal).toHaveLength(15);
+    expect(tall.horizontal[0]).toHaveLength(9);
+    expect(tall.vertical).toHaveLength(14);
+    expect(tall.vertical[0]).toHaveLength(10);
+    expect(tall.owners).toHaveLength(14);
+    expect(tall.owners[0]).toHaveLength(9);
+    expect(listLegalEdges(tall)).toHaveLength(15 * 9 + 14 * 10);
+  });
+});
+
+describe("grade retangular", () => {
+  it("fecha um quadrado na última linha de 2×3", () => {
+    let state = createGame(2, ["a", "b"], 3);
+    state = play(state, "a", { orientation: "h", row: 2, col: 0 });
+    state = play(state, "b", { orientation: "h", row: 3, col: 0 });
+    state = play(state, "a", { orientation: "v", row: 2, col: 0 });
+    const result = applyMove(state, "b", { orientation: "v", row: 2, col: 1 });
+    expect(result.completedSquares).toEqual([{ row: 2, col: 0 }]);
+    expect(result.state.owners[2][0]).toBe("b");
+    expect(result.state.currentPlayerIndex).toBe(1);
   });
 });
 

@@ -11,7 +11,8 @@ Snapshot público da sala (sem tokens).
 ```json
 {
   "code": "AB3K",
-  "size": 5,
+  "cols": 5,
+  "rows": 5,
   "status": "lobby",
   "hostPlayerId": "p1",
   "players": [
@@ -36,10 +37,10 @@ Cria sala e coloca o host nela.
 **Body**
 
 ```json
-{ "size": 5, "nick": "Ana", "color": "red" }
+{ "cols": 5, "rows": 5, "nick": "Ana", "color": "red" }
 ```
 
-`size` opcional; default 5.
+`cols` e `rows` = quadrados na horizontal e na vertical (`[2, 14]`). Atalho `size` ainda vale para grade quadrada (`cols = rows = size`). Default 5×5. Preset 10×15 pontos: `{ "cols": 9, "rows": 14 }`.
 
 **201**
 
@@ -75,3 +76,13 @@ Senta humano no lobby.
 **200** snapshot + session (nick/cor/id originais).
 
 **401/404** `{ "error": "invalid_token" | "room_not_found" }`
+
+## `POST /api/rooms/:code/draw`
+
+Marca um traço. Mesma regra do `game:draw` no WebSocket. O cliente usa esta rota na partida para confirmar o lance (e o prazo) mesmo se o socket local cair.
+
+**Body** `{ "seatToken": "opaque", "edge": { "orientation": "h", "row": 0, "col": 0 } }`
+
+**200** `{ "room": { "...snapshot público..." } }`
+
+**400/401/403/404** `{ "error": "invalid_token" | "illegal_move" | "not_your_turn" | "room_not_found" }`

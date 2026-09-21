@@ -42,10 +42,12 @@ export function Board({
   const board: GameState = game;
 
   const colors = new Map(room.players.map((p) => [p.id, p.color]));
-  const size = board.size;
-  const dots = size + 1;
-  const width = PAD * 2 + size * CELL;
-  const height = width;
+  const cols = board.cols;
+  const rows = board.rows;
+  const dotsX = cols + 1;
+  const dotsY = rows + 1;
+  const width = PAD * 2 + cols * CELL;
+  const height = PAD * 2 + rows * CELL;
   const targets = selected ? freeNeighbors(board, selected) : [];
 
   function toLocal(clientX: number, clientY: number) {
@@ -64,8 +66,8 @@ export function Board({
     if (!local) return null;
     let best: Point | null = null;
     let bestDist = DOT_HIT;
-    for (let row = 0; row < dots; row++) {
-      for (let col = 0; col < dots; col++) {
+    for (let row = 0; row < dotsY; row++) {
+      for (let col = 0; col < dotsX; col++) {
         const dist = Math.hypot(local.x - (PAD + col * CELL), local.y - (PAD + row * CELL));
         if (dist < bestDist) {
           best = { row, col };
@@ -124,7 +126,12 @@ export function Board({
         origin.current = null;
       }}
     >
-      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ aspectRatio: `${width} / ${height}` }}
+      >
         {glow ? (
           <g key={glow} className="board-glow" style={{ animationDuration: `${BOARD_GLOW_MS}ms` }}>
             <defs>
@@ -201,8 +208,8 @@ export function Board({
             }),
           ),
         )}
-        {Array.from({ length: dots }, (_, row) =>
-          Array.from({ length: dots }, (_, col) => {
+        {Array.from({ length: dotsY }, (_, row) =>
+          Array.from({ length: dotsX }, (_, col) => {
             const isSel = selected ? samePoint(selected, { row, col }) : false;
             const isTarget = targets.some((p) => samePoint(p, { row, col }));
             const kind = isSel ? "selected" : isTarget ? "target" : "idle";
@@ -291,7 +298,8 @@ function edgeBetween(a: Point, b: Point): Edge | null {
 }
 
 function freeNeighbors(game: GameState, point: Point): Point[] {
-  const last = game.size;
+  const lastRow = game.rows;
+  const lastCol = game.cols;
   const candidates: Point[] = [
     { row: point.row - 1, col: point.col },
     { row: point.row + 1, col: point.col },
@@ -299,7 +307,7 @@ function freeNeighbors(game: GameState, point: Point): Point[] {
     { row: point.row, col: point.col + 1 },
   ];
   return candidates.filter((next) => {
-    if (next.row < 0 || next.col < 0 || next.row > last || next.col > last) return false;
+    if (next.row < 0 || next.col < 0 || next.row > lastRow || next.col > lastCol) return false;
     const edge = edgeBetween(point, next);
     return edge !== null && !isDrawn(game, edge);
   });
