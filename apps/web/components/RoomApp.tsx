@@ -137,11 +137,9 @@ export function RoomApp({ code }: { code: string }) {
           );
         }
         if (message.type === "room:error") {
-          setPendingEdges((prev) => {
-            const game = roomRef.current && roomRef.current !== null ? roomRef.current.game : undefined;
-            if (!game) return [];
-            return prev.filter((edge) => edgeTaken(game, edge));
-          });
+          if (message.error === "illegal_move" || message.error === "not_your_turn") {
+            setPendingEdges((prev) => (prev.length ? prev.slice(0, -1) : prev));
+          }
           if (message.error === "invalid_token" || message.error === "room_not_found") {
             clearSession(roomCode);
             setSession(null);
@@ -240,21 +238,6 @@ export function RoomApp({ code }: { code: string }) {
       return next.length === prev.length ? prev : next;
     });
   }, [room]);
-
-  useEffect(() => {
-    if (!pendingEdges.length) return;
-    const t = setTimeout(() => {
-      void refreshRoom().then((next) => {
-        const shown = next ? preferRoom(roomRef.current, next) : roomRef.current;
-        const game = shown?.game;
-        setPendingEdges((prev) => {
-          if (!game) return [];
-          return prev.filter((edge) => edgeTaken(game, edge));
-        });
-      });
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [pendingEdges]);
 
   const glowSignal = boardGlow({
     status: room?.status ?? "lobby",
@@ -369,6 +352,7 @@ export function RoomApp({ code }: { code: string }) {
     viewRoom.game?.status === "playing" &&
     viewRoom.game.playerIds[viewRoom.game.currentPlayerIndex] === session.playerId;
   const myTurn = serverMyTurn || localMyTurn;
+  const canDraw = localMyTurn || (serverMyTurn && pendingEdges.length === 0);
   const showBoard = room.status === "playing" || (room.status === "finished" && holdingBoard);
   const timerMs = current?.kind === "bot" ? BOT_THINK_MS : TURN_TIMEOUT_MS;
 
@@ -413,7 +397,7 @@ export function RoomApp({ code }: { code: string }) {
         </div>
         <Board
           room={viewRoom}
-          canDraw={myTurn}
+          canDraw={canDraw}
           glow={glow}
           onDraw={(edge) => {
             setPendingEdges((prev) => [...prev, edge]);
