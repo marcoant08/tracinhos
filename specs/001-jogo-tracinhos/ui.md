@@ -53,6 +53,7 @@ Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. 
 ### Lobby (com sessão, status lobby)
 
 - Código grande + botão **“Copiar link”**: copia a URL absoluta da sala (`{origin}/sala/{codigo}`), não só o código. Toast curto “Link copiado”.
+- Link **Regras** → `/regras` (também no join e na home; **não** na partida nem no resultado).
 - Lista de jogadores (bolinha da cor **grande** + nick + host/bot). Atualiza sozinha quando alguém entra (WS e, **só no lobby**, GET a cada `LOBBY_POLL_MS` / 1 s). Na partida não há poll contínuo.
 - Host: “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), “Começar” (desabilitado se < 2).
 - Não-host: texto “Esperando o host…”.

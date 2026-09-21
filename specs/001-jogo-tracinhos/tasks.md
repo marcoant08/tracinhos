@@ -48,7 +48,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Tabuleiro escala para caber; todos os pontos visíveis; HUD altura fixa.
 - [x] Tela de resultado no `finished` (vencedor em destaque).
 - [x] Contador 25s (anel que esvazia) na vez humana; timeout marca traço aleatório + toast.
-- [x] Página `/regras` ligada ao lobby.
+- [x] Página `/regras` ligada à home e à sala (não no resultado).
 - [x] Bot pensa 1–2 s antes de jogar.
 - [x] “Copiar link” copia `{origin}/sala/{codigo}`.
 - [x] Copy de join: “Entrar”, nunca “Sentar”.

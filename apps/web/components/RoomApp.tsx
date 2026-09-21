@@ -547,9 +547,6 @@ function Results({ room }: { room: PublicRoom }) {
       <a className="btn" href="/">
         Nova sala
       </a>
-      <a className="text-link" href="/regras" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
-        Regras
-      </a>
     </div>
   );
 }

@@ -135,7 +135,7 @@ Fluxo completo cabe e é usável em ~360×640.
 - Sem ação essencial só no hover.
 - Erros e o aviso de timeout (traço aleatório) em toast no canto superior direito.
 - Botão reage ao toque (animação CSS de pressionar).
-- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout, bot 1 s). Link a partir do lobby.
+- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout, bot 1 s). Link só na home e na sala (join/lobby); não na partida nem no resultado.
 
 ## Fora de escopo
 
