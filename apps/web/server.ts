@@ -2,14 +2,17 @@ import { createServer } from "node:http";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node:url";
+import { loadEnvConfig } from "@next/env";
 import next from "next";
 import { WebSocketServer } from "ws";
 import { handleRest } from "./lib/http-api";
 import { bindSocket, startDisconnectSweeper } from "./lib/ws-server";
 
+const dir = dirname(fileURLToPath(import.meta.url));
+loadEnvConfig(dir);
+
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
-const dir = dirname(fileURLToPath(import.meta.url));
 const app = next({ dev, dir });
 const handle = app.getRequestHandler();
 

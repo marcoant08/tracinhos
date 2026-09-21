@@ -37,8 +37,8 @@ Princípios permanentes da v1. Mudar um item aqui é uma decisão de produto, n�
 
 ## Deploy
 
-- Produção: Vercel (um projeto Next.js) + Redis (Upstash).
-- Local: `docker compose up --build` sobe app + Redis.
+- Produção: Vercel (um projeto Next.js) + Redis (Upstash REST).
+- Local: `npm run dev`. Redis via `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
 - WebSocket nativo, não Socket.IO.
 
 ## Fora de escopo até nova spec
