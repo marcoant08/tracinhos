@@ -22,7 +22,7 @@ Princípios permanentes da v1. Mudar um item aqui é uma decisão de produto, n�
 
 - F5 não é um join novo. O mesmo `playerId`, nick e cor voltam via `seatToken`.
 - Sem o token, ninguém reivindica o assento.
-- O último nick e cor usados neste aparelho preenchem criar/entrar depois de F5 (independente da sala).
+- O último nick, cor e tamanho de grade deste aparelho preenchem criar/entrar depois de F5 (independente da sala).
 
 ## Identidade na sala
 

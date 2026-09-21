@@ -22,7 +22,7 @@ O visitante escolhe tamanho da grade (quadradas 2×2 a 10×10, ou 10×15 pontos 
 - Recebe um código curto (4 caracteres A–Z e 2–9, sem I/O/0/1).
 - É redirecionado para `/sala/:codigo` já como host.
 - Sessão `{ playerId, seatToken, nick, color, roomCode }` é persistida no `localStorage`.
-- Nick e cor do formulário vêm da preferência do aparelho (`tracinhos:identity`); F5 no lobby não zera. Depois de criar com sucesso, essa preferência é gravada.
+- Nick, cor e tamanho da grade vêm da preferência do aparelho (`tracinhos:identity`); F5 no lobby não zera. Nick/cor gravados depois de criar/entrar com sucesso; a grade gravada ao selecionar (e de novo ao criar).
 - O select de tamanho da grade é grande o bastante para o polegar (maior que um input comum).
 - Sem nick válido ou cor da paleta, a sala não é criada.
 
@@ -45,7 +45,7 @@ Nick: 2–16 caracteres após trim. `Ana` e `ana` colidem. Exibição usa o text
 
 Cor: uma das 8 cores da paleta. Sem hex livre.
 
-Bots: nick sorteado de `BOT_NICKS` (array fixo, fácil de editar), sem colidir com nicks já na sala. Se a lista acabar, cai em `Bot 1`, `Bot 2`, …. Primeira cor livre. Host não escolhe nick nem cor do bot.
+Bots: nome sorteado de `BOT_NICKS` (array fixo, fácil de editar), exibido como `Bot {nome}` (ex.: `Bot Jompes`), sem colidir com nicks já na sala. Se a lista acabar, cai em `Bot 1`, `Bot 2`, …. Primeira cor livre. Host não escolhe nick nem cor do bot.
 
 Depois de `playing`, nick e cor não mudam.
 

@@ -36,7 +36,7 @@ Coluna única:
 3. Bloco **Entrar**: código (4 chars, auto-maiúsculo), botão “Entrar”.
 4. Link **Regras** → `/regras`.
 
-Nick e cor do criar (e do join em `/sala/:codigo`) abrem já preenchidos com `tracinhos:identity` se existir. Gravados de novo após criar/entrar com sucesso.
+Nick, cor e tamanho da grade do criar (e nick/cor do join em `/sala/:codigo`) abrem já preenchidos com `tracinhos:identity` se existir. Nick/cor gravados de novo após criar/entrar com sucesso. A grade gravada ao mudar o select (sobrevive a F5 antes de criar).
 
 Cores ocupadas não se aplicam no criar (sala nova). No entrar, se o usuário já digitou código, buscar GET e desabilitar cores/nicks — ou ir direto a `/sala/:codigo` com o formulário lá. **Decisão:** o formulário completo de join mora em `/sala/:codigo`; o lobby só pede o código e navega.
 

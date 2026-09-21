@@ -30,10 +30,10 @@ Paleta de cores (ids estáveis):
 7. `teal`
 8. `pink`
 
-`BOT_NICKS` (sala, não o motor) — lista editável de nicks para bots. Sorteia um ainda livre (mesma chave de unicidade do nick humano). Esgotou: `Bot 1`, `Bot 2`, ….
+`BOT_NICKS` (sala, não o motor) — lista editável de **nomes** para bots. O nick na sala é sempre `Bot {nome}` (ex.: `Bot Jompes`). Sorteia um ainda livre (mesma chave de unicidade do nick humano, já com o prefixo). Esgotou: `Bot 1`, `Bot 2`, ….
 
 ```
-Jompes, Babigol, Daniglover, Micles, Cayogre, Murrycuck, Gigi, Fipe, Pede-serra, Gilb rick, Beuberico
+Jompes, Babigol, Daniglover, Micles, Cayogre, Murrycuck, Gigi, Fipe, Pede-serra, Gilb rick, Beuberico, Xandon, Barco, Zuão, Tio Ita, Oliver, Teus, Jiow, Adilex, Bobô, Italiano, Nalbs, Wellbhs, Welcareca, Casca, Bigs
 ```
 
 Código da sala: 4 caracteres do alfabeto `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
@@ -149,7 +149,7 @@ Cor válida: id ∈ paleta.
 
 Dois assentos não compartilham a mesma chave de nick nem o mesmo `color`.
 
-Preferência do aparelho (`localStorage` `tracinhos:identity`): último `{ nick, color }` com que a pessoa **entrou ou criou** com sucesso. Não é token de assento; só preenche formulário.
+Preferência do aparelho (`localStorage` `tracinhos:identity`): último `{ nick, color }` com que a pessoa **entrou ou criou** com sucesso, e o último `{ cols, rows }` **selecionado** no lobby (mesmo sem criar). Não é token de assento; só preenche formulário.
 
 ## Máquina da sala
 

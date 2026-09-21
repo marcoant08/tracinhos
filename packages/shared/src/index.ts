@@ -49,6 +49,21 @@ export const BOT_NICKS = [
   "Pede-serra",
   "Gilb rick",
   "Beuberico",
+  "Xandon",
+  "Barco",
+  "Zuão",
+  "Tio Ita",
+  "Oliver",
+  "Teus",
+  "Jiow",
+  "Adilex",
+  "Bobô",
+  "Italiano",
+  "Nalbs",
+  "Wellbhs",
+  "Welcareca",
+  "Casca",
+  "Bigs",
 ] as const;
 
 export type RoomStatus = "lobby" | "playing" | "finished";
@@ -153,12 +168,16 @@ export function sessionStorageKey(roomCode: string): string {
   return `${SESSION_PREFIX}${roomCode.toUpperCase()}`;
 }
 
+function displayBotNick(name: string) {
+  return `Bot ${name}`;
+}
+
 export function pickBotNick(takenNicks: string[], random: () => number = Math.random): string {
   const taken = new Set(takenNicks.map(nickKey));
-  const free = BOT_NICKS.filter((nick) => !taken.has(nickKey(nick)));
+  const free = BOT_NICKS.filter((name) => !taken.has(nickKey(displayBotNick(name))));
   if (free.length > 0) {
     const index = Math.min(free.length - 1, Math.max(0, Math.floor(random() * free.length)));
-    return free[index];
+    return displayBotNick(free[index]);
   }
   let n = 1;
   let nick = `Bot ${n}`;

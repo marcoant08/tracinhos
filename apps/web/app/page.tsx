@@ -6,7 +6,7 @@ import { TALL_GRID } from "@tracinhos/game";
 import { COLOR_IDS, type ColorId } from "@tracinhos/shared";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Toast } from "@/components/Toast";
-import { loadIdentity, saveIdentity, saveSession } from "@/lib/session";
+import { loadGridPref, loadIdentity, saveGridPref, saveIdentity, saveSession } from "@/lib/session";
 
 const GRID_OPTIONS = [
   ...Array.from({ length: 9 }, (_, i) => {
@@ -36,9 +36,14 @@ export default function HomePage() {
 
   useEffect(() => {
     const pref = loadIdentity();
-    if (!pref) return;
-    setNick(pref.nick);
-    setColor(pref.color);
+    if (pref) {
+      setNick(pref.nick);
+      setColor(pref.color);
+    }
+    const grid = loadGridPref();
+    if (!grid) return;
+    setCols(grid.cols);
+    setRows(grid.rows);
   }, []);
 
   useEffect(() => {
@@ -61,7 +66,7 @@ export default function HomePage() {
         return;
       }
       saveSession(data.session);
-      saveIdentity({ nick: data.session.nick, color: data.session.color });
+      saveIdentity({ nick: data.session.nick, color: data.session.color, cols, rows });
       router.push(`/sala/${data.session.roomCode}`);
     } finally {
       setBusy(false);
@@ -100,6 +105,7 @@ export default function HomePage() {
               if (!next) return;
               setCols(next.cols);
               setRows(next.rows);
+              saveGridPref(next);
             }}
           >
             {GRID_OPTIONS.map((g) => (

@@ -62,8 +62,9 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] Select da grade maior (min-height 56px, fonte ≥ 1.15rem) no lobby.
 - [x] “Adicionar bot” desabilitado com sala cheia (`MAX_PLAYERS`).
-- [x] Preferência `tracinhos:identity` (nick+cor) sobrevive a F5 nos formulários; grava no criar/entrar.
+- [x] Preferência `tracinhos:identity` (nick+cor+grade) sobrevive a F5 nos formulários; nick/cor no criar/entrar; grade ao selecionar.
 - [x] `BOT_NICKS` editável; addBot sorteia nome livre; fallback `Bot N`.
+- [x] Nick do bot sempre com prefixo `Bot `; lista extra (Xandon, Barco, Zuão, …).
 - [x] Vinheta no papel: acende e apaga **uma vez** (~1 s) e volta ao normal.
 - [x] Relógio (anel + número) também na vez do bot; `turnDeadlineAt` preenchido.
 - [x] Placar: vez atual em negrito + `👈`.

@@ -66,10 +66,10 @@ Boot: se existir, `room:resume`. Senão, formulário (nick/cor de `tracinhos:ide
 Preferência do aparelho, chave `tracinhos:identity`:
 
 ```
-{ nick, color }
+{ nick, color, cols, rows }
 ```
 
-Grava depois de criar ou entrar com sucesso. Independente da sala. Não substitui o `seatToken`.
+Nick/cor: grava depois de criar ou entrar com sucesso. `cols`/`rows`: grava ao selecionar a grade no lobby (e de novo ao criar). Independente da sala. Não substitui o `seatToken`.
 
 ## Riscos
 
