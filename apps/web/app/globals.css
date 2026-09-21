@@ -522,6 +522,21 @@ select:focus {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+.ws-flag {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  background: #4a221c;
+  color: var(--paper);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-top: 1px solid #7a3d34;
+}
+
 .list {
   display: flex;
   flex-direction: column;

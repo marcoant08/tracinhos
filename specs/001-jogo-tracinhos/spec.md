@@ -94,12 +94,12 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Fechar 2 quadrados no mesmo traço: marca os dois, +2; **também joga de novo**.
 - Sem fechar quadrado: a vez **passa** ao próximo. Alternância só nesse caso.
 - Bot na vez: o servidor joga **sozinho**, **uma jogada por vez**, depois de **1 s visível** (`BOT_THINK_MS`) com o nome dele no HUD. Fecha se puder; senão evita deixar quadrado com 3 lados; se for obrigado, escolhe o lance que deixa menos. Se fechar, pensa de novo (mais 1 s) e joga outra vez. Nunca aplica 2 lances de bot no mesmo instante.
-- Humano na vez tem **25 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**; se esse traço não fechar quadrado a vez passa; se fechar, a pessoa joga de novo (novo prazo). Todos veem um toast avisando.
+- Humano na vez tem **40 s** (`TURN_TIMEOUT_MS`) para completar o traço (os dois toques). Acabou o tempo sem traço: o servidor marca **um traço aleatório legal no nome dessa pessoa**; se esse traço não fechar quadrado a vez passa; se fechar, a pessoa joga de novo (novo prazo). Todos veem um toast avisando.
 - O prazo é do servidor (`turnDeadlineAt` na sala). Vale para **humano e bot** (bot: agora + `BOT_THINK_MS`). F5 e reconectar mostram o tempo restante, não o prazo cheio de novo.
 - Relógio (número + anel) **sempre visível** na vez, inclusive bot.
 - No placar, o nick da vez fica **em negrito** com `👈` depois do nome.
 - No HUD (e no resultado), cada linha mostra **quadrados e traços** daquela pessoa. Traços = arestas com o `playerId` dela (inclui timeout). A vitória continua sendo por quadrados.
-- Papel da grade, **só para quem está na vez neste aparelho.** Ao entrar na vez: vinheta **azul** acende e apaga uma vez (~1 s). A borda **pisca o turno inteiro** (azul >10 s; laranja ≤ 10 s; vermelho ≤ 5 s). Cada troca de cor dispara a vinheta uma vez. Vez de outra pessoa ou de bot: sem borda/vinheta.
+- Papel da grade, **só na tela de quem está na vez:** borda pisca na cor do jogador; laranja + fade aos ≤ 10 s; vermelho + fade aos ≤ 5 s. Vez de outra pessoa ou bot: tabuleiro normal. Sem WS: faixa fixa no rodapé “Sem conexão com o servidor”.
 
 ### 7. Fim
 

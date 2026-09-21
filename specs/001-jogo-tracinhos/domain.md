@@ -13,7 +13,7 @@ Motor puro. Sem I/O. Implementação: `packages/game`.
 | `NICK_MIN` | 2 |
 | `NICK_MAX` | 16 |
 | `DISCONNECT_TO_BOT_MS` | 30000 |
-| `TURN_TIMEOUT_MS` | 25000 |
+| `TURN_TIMEOUT_MS` | 40000 |
 | `BOT_THINK_MS` | 1000 |
 | `RESULT_HOLD_MS` | 3000 |
 | `LOBBY_POLL_MS` | 1000 |
@@ -130,7 +130,7 @@ O **servidor** (não o motor) espera **1 s cheio** (`BOT_THINK_MS`) **depois de 
 
 O relógio é da **sala** (`turnDeadlineAt` no snapshot). Corre na vez de humano **e** de bot.
 
-- Humano: `TURN_TIMEOUT_MS` (25 s). Estourou sem `game:draw`: traço aleatório no nome de quem estava na vez; extra se fechar quadrado.
+- Humano: `TURN_TIMEOUT_MS` (40 s). Estourou sem `game:draw`: traço aleatório no nome de quem estava na vez; extra se fechar quadrado.
 - Bot: `BOT_THINK_MS` (1 s) no snapshot, para o relógio. O lance sai do loop do servidor após 1 s (`pickBotMove`), não do timeout de traço aleatório.
 - `game:draw` no prazo: aplica e reinicia o prazo da vez seguinte (ou da extra).
 - Cliente atrasado: `game:draw` depois do prazo humano é ignorado.

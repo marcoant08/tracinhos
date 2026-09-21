@@ -27,6 +27,7 @@ export function RoomApp({ code }: { code: string }) {
   const [color, setColor] = useState<ColorId>("blue");
   const [toast, setToast] = useState<string | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
+  const [wsDown, setWsDown] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<object[]>([]);
   const backoff = useRef(1000);
@@ -178,6 +179,7 @@ export function RoomApp({ code }: { code: string }) {
       }
       ws.onopen = () => {
         backoff.current = 1000;
+        setWsDown(false);
         ws.send(
           JSON.stringify({
             type: "room:resume",
@@ -210,6 +212,7 @@ export function RoomApp({ code }: { code: string }) {
       };
       ws.onclose = () => {
         if (stopped || elsewhere) return;
+        setWsDown(true);
         const wait = backoff.current;
         backoff.current = Math.min(wait * 2, 30000);
         setTimeout(connect, wait);
@@ -263,6 +266,9 @@ export function RoomApp({ code }: { code: string }) {
     });
   }, [room]);
 
+  const turnPlayer = room?.status === "playing"
+    ? room.players.find((p) => p.id === room.game?.playerIds[room.game.currentPlayerIndex])
+    : undefined;
   const glowSignal = boardGlow({
     status: room?.status ?? "lobby",
     myTurn: Boolean(
@@ -271,14 +277,19 @@ export function RoomApp({ code }: { code: string }) {
         room.status === "playing" &&
         room.game?.playerIds[room.game.currentPlayerIndex] === session.playerId,
     ),
-    currentKind: room?.players.find(
-      (p) => p.id === room.game?.playerIds[room.game.currentPlayerIndex],
-    )?.kind,
+    currentKind: turnPlayer?.kind,
     deadlineAt: room?.turnDeadlineAt ?? null,
     now,
   });
-  const glow = glowSignal;
-  const flash = useGlowFlash(glowSignal);
+  const borderColor =
+    glowSignal === "red"
+      ? COLOR_HEX.red
+      : glowSignal === "orange"
+        ? COLOR_HEX.orange
+        : glowSignal === "turn" && turnPlayer
+          ? COLOR_HEX[turnPlayer.color]
+          : null;
+  const flash = useGlowFlash(borderColor);
 
   async function sit() {
     const res = await fetch(`/api/rooms/${roomCode}/join`, {
@@ -338,6 +349,8 @@ export function RoomApp({ code }: { code: string }) {
     );
   }
 
+  const wsFlag = <WsFlag show={wsDown} />;
+
   if (!session) {
     return (
       <main className="page">
@@ -386,6 +399,7 @@ export function RoomApp({ code }: { code: string }) {
       <main className="page">
         <Results room={room} />
         <Toast message={toast} />
+        {wsFlag}
       </main>
     );
   }
@@ -423,7 +437,7 @@ export function RoomApp({ code }: { code: string }) {
         <Board
           room={viewRoom}
           canDraw={canDraw}
-          glow={glow}
+          borderColor={borderColor}
           flash={flash}
           onDraw={(edge) => {
             setPendingEdges((prev) => [...prev, edge]);
@@ -431,6 +445,7 @@ export function RoomApp({ code }: { code: string }) {
           }}
         />
         <Toast message={toast} />
+        {wsFlag}
       </main>
     );
   }
@@ -481,6 +496,7 @@ export function RoomApp({ code }: { code: string }) {
         )}
       </div>
       <Toast message={toast} />
+      {wsFlag}
     </main>
   );
 }
@@ -599,9 +615,9 @@ function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs:
   );
 }
 
-function useGlowFlash(signal: "blue" | "orange" | "red" | null) {
-  const [flash, setFlash] = useState<"blue" | "orange" | "red" | null>(null);
-  const prev = useRef<"blue" | "orange" | "red" | null>(null);
+function useGlowFlash(signal: string | null) {
+  const [flash, setFlash] = useState<string | null>(null);
+  const prev = useRef<string | null>(null);
 
   useEffect(() => {
     if (!signal) {
@@ -656,10 +672,19 @@ function boardGlow({
   currentKind?: string;
   deadlineAt: number | null;
   now: number;
-}): "blue" | "orange" | "red" | null {
+}): "turn" | "orange" | "red" | null {
   if (status !== "playing" || currentKind !== "human" || !myTurn || !deadlineAt) return null;
   const left = deadlineAt - now;
   if (left <= 5_000) return "red";
   if (left <= 10_000) return "orange";
-  return "blue";
+  return "turn";
+}
+
+function WsFlag({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div className="ws-flag" role="status">
+      Sem conexão com o servidor
+    </div>
+  );
 }

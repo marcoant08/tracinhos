@@ -23,6 +23,8 @@ Paleta de jogadores (hex de tela, ids iguais ao domínio):
 
 **Erros:** toast no **canto superior direito** (todas as telas: lobby, join, sala). Uma linha, some sozinho ~2,2s. Não empurra o layout. Vários erros: substitui o anterior.
 
+**WS caiu:** faixa fixa no **rodapé** (“Sem conexão com o servidor”), com sessão na sala. Some ao reabrir o socket. Não empurra o layout.
+
 **Identidade na UI:** bolinha da cor **maior** que o texto ao lado (≥ 14px de diâmetro no HUD/listas; ≥ 18px na tela de resultado). Contraste visível sobre o fundo escuro.
 
 **Placar:** em cada linha, **nick e números separados** — nick à esquerda (pode truncar); à direita **dois contadores tabulares**: quadrados (`scores`) e traços (arestas com aquele `playerId`). Não colar `Marco 0`. Sufixos: **quadrado e mini-traço do mesmo tamanho** (13px); o quadrado tem bolinha em cada canto; o traço tem bolinha em cada ponta. `aria-label` “quadrados” / “traços”. Mesmo padrão no HUD e na tela de resultado. Vencer continua sendo por quadrados.
@@ -63,7 +65,7 @@ Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. 
 HUD fixo no topo (não rola com o tabuleiro), **altura constante**:
 
 - Vez: “Vez de {nick}” + bolinha da cor **grande**. Se for você: destaque “Sua vez”.
-- **Tempo (humano e bot):** número `{n}s` + **borda/anel**. Humano: 25s cheio → 0. Bot: 1s cheio → 0 (`BOT_THINK_MS`). Sempre visível enquanto `playing` e há `turnDeadlineAt`. Cada lance de bot só sai **depois** de 1 s com o snapshot já na tela (nome no HUD + traço anterior visível); nunca empilha 2–3 bots no mesmo frame.
+- **Tempo (humano e bot):** número `{n}s` + **borda/anel**. Humano: 40s cheio → 0. Bot: 1s cheio → 0 (`BOT_THINK_MS`). Sempre visível enquanto `playing` e há `turnDeadlineAt`. Cada lance de bot só sai **depois** de 1 s com o snapshot já na tela (nome no HUD + traço anterior visível); nunca empilha 2–3 bots no mesmo frame.
 - Placar: uma linha por jogador — cor grande + nick (esquerda) + **quadrados (mini-`□` com bolinha em cada canto) e traços (mini-linha com bolinhas nas pontas)** (direita, separados). Quem está na vez: nick **negrito** e `👈` imediatamente após o nome (ex.: `Marco 👈`). As outras linhas iguais. Altura do bloco de placar não salta.
 
 Entre o placar e o tabuleiro, o mesmo vão que entre o indicador de vez (“Sua vez”) e os nomes.
@@ -71,7 +73,7 @@ Entre o placar e o tabuleiro, o mesmo vão que entre o indicador de vez (“Sua 
 Abaixo, viewport do tabuleiro:
 
 - O tabuleiro **escala para caber** no espaço restante (largura e altura da viewport menos HUD e safe-area). **Todos os pontos visíveis o tempo todo.** Sem pan/zoom obrigatório; se sobrar espaço, o papel fica no topo, com o vão acima igual ao do HUD.
-- **Borda / vinheta no papel** (só para quem está na vez neste aparelho). Ao **entrar** na sua vez: vinheta **azul** (`#2f6fed`) acende e apaga uma vez (~1 s). A **borda** do papel **pisca o tempo todo** na cor do estado: azul com mais de 10 s; **laranja** (`#e06b20`) aos ≤ 10 s; **vermelho** (`#d64545`) aos ≤ 5 s. Troca de cor também dispara a vinheta uma vez. Vez de outra pessoa ou de bot: sem borda e sem vinheta. Sem empurrar layout.
+- **Borda / vinheta no papel** (só na tela de quem está na vez). Borda pisca na **cor do jogador**; aos ≤ 10 s fica **laranja** (`#e06b20`) e dispara o fade uma vez; aos ≤ 5 s fica **vermelha** (`#d64545`) com o fade. Vez de outra pessoa ou de bot: papel normal, sem borda. Sem empurrar layout.
 - Pontos grandes o bastante para o polegar (escalam com a célula). Traço feito em tinta escura, com um fio mais fino da cor de quem jogou por cima; quadrado preenchido na cor do dono com opacidade ~0.45. Traço livre é um fio bem fino (não é o alvo do toque).
 - **Dois toques:** origem pisca em acento (`#c45c26`); destinos livres piscam em teal (`#1f8a8a`). Sem destino livre, o ponto não vira origem.
 - Clique no segundo ponto válido pinta o traço **na hora** (e o quadrado, se fechou) e confirma com `POST /api/rooms/:code/draw` (o HUD/relógio seguem o snapshot da resposta). Se o POST falhar de rede, cai no `game:draw` via WS. O traço local **fica** até o snapshot confirmar; se o servidor rejeitar só o último lance em voo, esse some. Sem fechar: não aceita outro clique até confirmar (evita o traço sumir). Extra: dá para traçar de novo sem esperar o round-trip. Traço já existente não é destino.
@@ -102,7 +104,7 @@ Quando o snapshot chega `finished`, a UI **permanece na partida 3 s** (`RESULT_H
 
 ## `/regras`
 
-Página estática, mesma visual do lobby. Explica: objetivo, dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 25 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fecham se puderem e evitam abrir quadrado pro próximo, fim. Link de volta ao lobby.
+Página estática, mesma visual do lobby. Explica: objetivo, dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 40 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fecham se puderem e evitam abrir quadrado pro próximo, fim. Link de volta ao lobby.
 
 ## Acessibilidade mínima
 

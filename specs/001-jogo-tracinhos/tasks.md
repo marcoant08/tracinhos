@@ -13,7 +13,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] `pickBotMove`: fecha se puder; evita 3 lados; se forçado, o lance que deixa menos.
 - [x] Invariante: soma dos scores = quadrados com dono.
 - [x] `countEdgesByPlayer`: soma dos traços = arestas com dono.
-- [x] `turnDeadlineAt` + traço aleatório no nome de quem estoura 25s.
+- [x] `turnDeadlineAt` + traço aleatório no nome de quem estoura 40s.
 
 ## 2. Contratos (`packages/shared`)
 
@@ -27,7 +27,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] draw + bot loop até vez humana ou fim.
 - [x] Disconnect 30s → bot; resume → humano.
 - [x] Lock + pub/sub.
-- [x] Delay do bot 1–2 s; timeout 25 s marca traço aleatório (servidor).
+- [x] Delay do bot 1–2 s; timeout 40 s marca traço aleatório (servidor).
 
 ## 4. WebSocket
 
@@ -47,7 +47,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Animação CSS de pressionar nos botões.
 - [x] Tabuleiro escala para caber; todos os pontos visíveis; HUD altura fixa.
 - [x] Tela de resultado no `finished` (vencedor em destaque).
-- [x] Contador 25s (anel que esvazia) na vez humana; timeout marca traço aleatório + toast.
+- [x] Contador 40s (anel que esvazia) na vez humana; timeout marca traço aleatório + toast.
 - [x] Página `/regras` ligada à home e à sala (não no resultado).
 - [x] Bot pensa 1–2 s antes de jogar.
 - [x] “Copiar link” copia `{origin}/sala/{codigo}`.
@@ -65,7 +65,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Preferência `tracinhos:identity` (nick+cor+grade) sobrevive a F5 nos formulários; nick/cor no criar/entrar; grade ao selecionar.
 - [x] `BOT_NICKS` editável; addBot sorteia nome livre; fallback `Bot N`.
 - [x] Nick do bot sempre com prefixo `Bot `; lista extra (Xandon, Barco, Zuão, …).
-- [x] Na sua vez: fade azul 1 s + borda piscando (azul → laranja 10 s → vermelho 5 s); só neste aparelho.
+- [x] Borda/fade só na tela de quem está na vez (cor do jogador → laranja 10 s → vermelho 5 s). Faixa de WS no rodapé se o socket cair.
 - [x] Relógio (anel + número) também na vez do bot; `turnDeadlineAt` preenchido.
 - [x] Placar: vez atual em negrito + `👈`.
 - [x] Placar HUD/resultado: quadrados com bolinha em cada canto e traços com bolinhas nas pontas.

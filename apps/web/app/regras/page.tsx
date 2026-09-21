@@ -46,7 +46,7 @@ export default function RegrasPage() {
       <section className="card rules">
         <h2>Tempo</h2>
         <p>
-          Cada humano tem 25 segundos para completar os dois toques. Se o tempo
+          Cada humano tem 40 segundos para completar os dois toques. Se o tempo
           acabar sem traço, o jogo marca <strong>um traço aleatório no nome dessa
           pessoa</strong> (pode até fechar quadrado). Se não fechar, a vez passa; se
           fechar, essa pessoa joga de novo. Um aviso aparece no canto da tela.

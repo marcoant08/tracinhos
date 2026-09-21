@@ -7,26 +7,20 @@ import { BOARD_GLOW_MS, COLOR_HEX, type ColorId, type PublicRoom } from "@tracin
 const CELL = 56;
 const PAD = 28;
 const DOT_HIT = 22;
-const GLOW_HEX = {
-  blue: COLOR_HEX.blue,
-  orange: COLOR_HEX.orange,
-  red: COLOR_HEX.red,
-} as const;
-
 type Edge = { orientation: "h" | "v"; row: number; col: number };
 type Point = { row: number; col: number };
 
 export function Board({
   room,
   canDraw,
-  glow,
+  borderColor,
   flash,
   onDraw,
 }: {
   room: PublicRoom;
   canDraw: boolean;
-  glow?: "blue" | "orange" | "red" | null;
-  flash?: "blue" | "orange" | "red" | null;
+  borderColor?: string | null;
+  flash?: string | null;
   onDraw: (edge: Edge) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -120,7 +114,7 @@ export function Board({
   return (
     <div
       className="board-wrap"
-      data-glow={glow ?? undefined}
+      data-glow={borderColor ? "on" : undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -138,8 +132,8 @@ export function Board({
           <g key={flash} className="board-glow" style={{ animationDuration: `${BOARD_GLOW_MS}ms` }}>
             <defs>
               <radialGradient id="turn-glow" cx="50%" cy="50%" r="68%">
-                <stop offset="35%" stopColor={GLOW_HEX[flash]} stopOpacity="0" />
-                <stop offset="100%" stopColor={GLOW_HEX[flash]} stopOpacity="0.55" />
+                <stop offset="35%" stopColor={flash} stopOpacity="0" />
+                <stop offset="100%" stopColor={flash} stopOpacity="0.55" />
               </radialGradient>
             </defs>
             <rect
@@ -153,7 +147,7 @@ export function Board({
             />
           </g>
         ) : null}
-        {glow ? (
+        {borderColor ? (
           <rect
             className="board-turn-border"
             x="3"
@@ -162,7 +156,7 @@ export function Board({
             height={height - 6}
             rx="13"
             fill="none"
-            stroke={GLOW_HEX[glow]}
+            stroke={borderColor}
             strokeWidth="4"
             pointerEvents="none"
           />
