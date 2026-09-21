@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { applyMove, MAX_PLAYERS, type Edge, type GameState } from "@tracinhos/game";
+import { applyMove, countEdgesByPlayer, MAX_PLAYERS, type Edge, type GameState } from "@tracinhos/game";
 import {
   BOT_THINK_MS,
   BOARD_GLOW_MS,
@@ -476,10 +476,13 @@ export function RoomApp({ code }: { code: string }) {
 }
 
 function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }) {
+  const strokes = room.game ? countEdgesByPlayer(room.game) : {};
   return (
     <div className="score">
       {room.players.map((p) => {
         const isTurn = Boolean(currentId && p.id === currentId);
+        const squares = room.game?.scores[p.id] ?? 0;
+        const lines = strokes[p.id] ?? 0;
         return (
           <div key={p.id} className="score-row" aria-current={isTurn ? "true" : undefined}>
             <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
@@ -491,7 +494,20 @@ function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }
                 </span>
               ) : null}
             </span>
-            <span className="score-pts">{room.game?.scores[p.id] ?? 0}</span>
+            <span className="score-stats">
+              <span className="score-stat" aria-label={`${squares} ${squares === 1 ? "quadrado" : "quadrados"}`}>
+                <span className="score-pts">{squares}</span>
+                <span className="score-unit" aria-hidden="true">
+                  □
+                </span>
+              </span>
+              <span className="score-stat" aria-label={`${lines} ${lines === 1 ? "traço" : "traços"}`}>
+                <span className="score-pts">{lines}</span>
+                <span className="score-unit" aria-hidden="true">
+                  ─
+                </span>
+              </span>
+            </span>
           </div>
         );
       })}

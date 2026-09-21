@@ -153,6 +153,22 @@ export function listLegalEdges(state: GameState): Edge[] {
   return edges;
 }
 
+export function countEdgesByPlayer(state: GameState): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const id of state.playerIds) counts[id] = 0;
+  for (const row of state.horizontal) {
+    for (const owner of row) {
+      if (owner) counts[owner] = (counts[owner] ?? 0) + 1;
+    }
+  }
+  for (const row of state.vertical) {
+    for (const owner of row) {
+      if (owner) counts[owner] = (counts[owner] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
 export function scoreSumEqualsOwned(state: GameState): boolean {
   let owned = 0;
   for (const row of state.owners) {

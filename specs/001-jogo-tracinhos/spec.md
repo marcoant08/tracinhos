@@ -98,6 +98,7 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - O prazo é do servidor (`turnDeadlineAt` na sala). Vale para **humano e bot** (bot: agora + `BOT_THINK_MS`). F5 e reconectar mostram o tempo restante, não o prazo cheio de novo.
 - Relógio (número + anel) **sempre visível** na vez, inclusive bot.
 - No placar, o nick da vez fica **em negrito** com `👈` depois do nome.
+- No HUD (e no resultado), cada linha mostra **quadrados e traços** daquela pessoa. Traços = arestas com o `playerId` dela (inclui timeout). A vitória continua sendo por quadrados.
 - Papel da grade: vinheta nas **bordas internas** (cor forte na borda, some no meio). **Acende e apaga uma vez** (~1 s) e volta ao papel. Verde ao começar a sua vez (com mais de 10 s); laranja ao entrar nos últimos 10 s da vez humana; vermelho aos últimos 5 s. Laranja/vermelho valem para todos que olham a sala; o verde só na vez de quem está neste aparelho. Uma cor de cada vez (vermelho > laranja > verde).
 
 ### 7. Fim
@@ -109,7 +110,7 @@ Quando não restam arestas livres, a partida termina.
 - Vence quem tem mais quadrados.
 - Empate: todos com a pontuação máxima empatada são vencedores.
 - Snapshot `finished` + lista de `winnerIds` (o servidor marca o fim na hora).
-- A UI **segura o tabuleiro 3 s** (`RESULT_HOLD_MS`) depois do último traço, para dar tempo de ver o quadrado pintar. Só então troca para a **tela de resultado**: placar completo (nick + cor + pontos) e o(s) nome(s) do vencedor em destaque. Empate: destaca todos os empatados.
+- A UI **segura o tabuleiro 3 s** (`RESULT_HOLD_MS`) depois do último traço, para dar tempo de ver o quadrado pintar. Só então troca para a **tela de resultado**: placar completo (nick + cor + quadrados + traços) e o(s) nome(s) do vencedor em destaque. Empate: destaca todos os empatados.
 - F5 já em `finished`: vai direto ao resultado (sem a pausa).
 
 ### 8. Desconexão

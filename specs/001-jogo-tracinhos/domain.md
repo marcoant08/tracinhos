@@ -71,6 +71,8 @@ winnerIds: string[]       // vazio enquanto playing
 
 `createGame(size, playerIds)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. A sala define o prazo no `start` e a cada lance.
 
+`countEdgesByPlayer(state)` deriva, das grades `horizontal`/`vertical`, quantos traços cada `playerId` fez. Não mora no `GameState`. Timeout e lance normal incrementam igual (a aresta ganha dono).
+
 ## Jogada legal
 
 `isLegalEdge(state, edge)` é verdadeiro somente se:
@@ -169,6 +171,7 @@ Transições de assento:
 
 - `playerIds.length` ∈ `[2, 5]` após start.
 - Soma dos scores = número de quadrados com dono.
+- Soma dos traços por jogador = número de arestas não `null`.
 - Quadrado com dono tem os 4 lados com `playerId`.
 - `finished` ⇔ zero arestas livres.
 - Em `finished`, `winnerIds` não é vazio.

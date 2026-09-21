@@ -7,6 +7,7 @@ import {
   pickBotMove,
   pickRandomMove,
   scoreSumEqualsOwned,
+  countEdgesByPlayer,
   type Edge,
   type GameState,
 } from "./index.js";
@@ -43,6 +44,7 @@ describe("applyMove", () => {
 
     const after = play(state, "a", { orientation: "h", row: 0, col: 0 });
     expect(after.horizontal[0][0]).toBe("a");
+    expect(countEdgesByPlayer(after)).toEqual({ a: 1, b: 0 });
     expect(() =>
       applyMove(after, "b", { orientation: "h", row: 0, col: 0 }),
     ).toThrow(/illegal_move/);
@@ -143,6 +145,8 @@ describe("applyMove", () => {
     expect(state.scores.b).toBe(2);
     expect(state.winnerIds).toEqual(["a", "b"]);
     expect(scoreSumEqualsOwned(state)).toBe(true);
+    const edges = countEdgesByPlayer(state);
+    expect(edges.a + edges.b).toBe(12);
   });
 });
 

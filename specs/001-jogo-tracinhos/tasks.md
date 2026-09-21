@@ -12,6 +12,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Fim + vencedor único e empate.
 - [x] `pickBotMove` guloso determinístico (fecha se puder; senão primeira legal).
 - [x] Invariante: soma dos scores = quadrados com dono.
+- [x] `countEdgesByPlayer`: soma dos traços = arestas com dono.
 - [x] `turnDeadlineAt` + traço aleatório no nome de quem estoura 25s.
 
 ## 2. Contratos (`packages/shared`)
@@ -51,7 +52,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Bot pensa 1–2 s antes de jogar.
 - [x] “Copiar link” copia `{origin}/sala/{codigo}`.
 - [x] Copy de join: “Entrar”, nunca “Sentar”.
-- [x] Bolinha da cor maior; placar com nick e pontos separados.
+- [x] Bolinha da cor maior; placar com nick, quadrados e traços separados.
 
 ## 6. Empacotar
 
@@ -66,5 +67,6 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Vinheta no papel: acende e apaga **uma vez** (~1 s) e volta ao normal.
 - [x] Relógio (anel + número) também na vez do bot; `turnDeadlineAt` preenchido.
 - [x] Placar: vez atual em negrito + `👈`.
+- [x] Placar HUD/resultado: quadrados `□` e traços `─` por jogador.
 - [x] Cliente segura o tabuleiro `RESULT_HOLD_MS` (3 s) antes do resultado; F5 em `finished` pula.
 - [x] Bot pensa `BOT_THINK_MS` (1 s) **depois de publicar** cada snapshot; `/regras` diz 1 s. Traço do humano pinta na hora (otimista).
