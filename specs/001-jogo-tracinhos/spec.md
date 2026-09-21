@@ -99,7 +99,7 @@ Um jogador de cada vez. Na sua vez, o humano forma o traço em **dois toques**:
 - Relógio (número + anel) **sempre visível** na vez, inclusive bot.
 - No placar, o nick da vez fica **em negrito** com `👈` depois do nome.
 - No HUD (e no resultado), cada linha mostra **quadrados e traços** daquela pessoa. Traços = arestas com o `playerId` dela (inclui timeout). A vitória continua sendo por quadrados.
-- Papel da grade: vinheta nas **bordas internas** (cor forte na borda, some no meio). **Acende e apaga uma vez** (~1 s) e volta ao papel. Verde ao começar a sua vez (com mais de 10 s); laranja ao entrar nos últimos 10 s da vez humana; vermelho aos últimos 5 s. Laranja/vermelho valem para todos que olham a sala; o verde só na vez de quem está neste aparelho. Uma cor de cada vez (vermelho > laranja > verde).
+- Papel da grade, **só para quem está na vez neste aparelho.** Ao entrar na vez: vinheta **azul** acende e apaga uma vez (~1 s). A borda **pisca o turno inteiro** (azul >10 s; laranja ≤ 10 s; vermelho ≤ 5 s). Cada troca de cor dispara a vinheta uma vez. Vez de outra pessoa ou de bot: sem borda/vinheta.
 
 ### 7. Fim
 

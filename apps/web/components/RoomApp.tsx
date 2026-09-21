@@ -277,7 +277,8 @@ export function RoomApp({ code }: { code: string }) {
     deadlineAt: room?.turnDeadlineAt ?? null,
     now,
   });
-  const glow = useGlowFlash(glowSignal);
+  const glow = glowSignal;
+  const flash = useGlowFlash(glowSignal);
 
   async function sit() {
     const res = await fetch(`/api/rooms/${roomCode}/join`, {
@@ -423,6 +424,7 @@ export function RoomApp({ code }: { code: string }) {
           room={viewRoom}
           canDraw={canDraw}
           glow={glow}
+          flash={flash}
           onDraw={(edge) => {
             setPendingEdges((prev) => [...prev, edge]);
             void submitDraw(edge);
@@ -597,9 +599,9 @@ function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs:
   );
 }
 
-function useGlowFlash(signal: "green" | "orange" | "red" | null) {
-  const [flash, setFlash] = useState<"green" | "orange" | "red" | null>(null);
-  const prev = useRef<"green" | "orange" | "red" | null>(null);
+function useGlowFlash(signal: "blue" | "orange" | "red" | null) {
+  const [flash, setFlash] = useState<"blue" | "orange" | "red" | null>(null);
+  const prev = useRef<"blue" | "orange" | "red" | null>(null);
 
   useEffect(() => {
     if (!signal) {
@@ -654,11 +656,10 @@ function boardGlow({
   currentKind?: string;
   deadlineAt: number | null;
   now: number;
-}): "green" | "orange" | "red" | null {
-  if (status !== "playing" || currentKind !== "human" || !deadlineAt) return null;
+}): "blue" | "orange" | "red" | null {
+  if (status !== "playing" || currentKind !== "human" || !myTurn || !deadlineAt) return null;
   const left = deadlineAt - now;
   if (left <= 5_000) return "red";
   if (left <= 10_000) return "orange";
-  if (myTurn) return "green";
-  return null;
+  return "blue";
 }

@@ -65,7 +65,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Preferência `tracinhos:identity` (nick+cor+grade) sobrevive a F5 nos formulários; nick/cor no criar/entrar; grade ao selecionar.
 - [x] `BOT_NICKS` editável; addBot sorteia nome livre; fallback `Bot N`.
 - [x] Nick do bot sempre com prefixo `Bot `; lista extra (Xandon, Barco, Zuão, …).
-- [x] Vinheta no papel: acende e apaga **uma vez** (~1 s) e volta ao normal.
+- [x] Na sua vez: fade azul 1 s + borda piscando (azul → laranja 10 s → vermelho 5 s); só neste aparelho.
 - [x] Relógio (anel + número) também na vez do bot; `turnDeadlineAt` preenchido.
 - [x] Placar: vez atual em negrito + `👈`.
 - [x] Placar HUD/resultado: quadrados com bolinha em cada canto e traços com bolinhas nas pontas.

@@ -562,6 +562,10 @@ select:focus {
   animation: board-glow-flash 1s ease-in-out forwards;
 }
 
+.board-turn-border {
+  animation: board-border-blink 1s ease-in-out infinite;
+}
+
 @keyframes board-glow-flash {
   0% {
     opacity: 0;
@@ -574,5 +578,15 @@ select:focus {
   }
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes board-border-blink {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 1;
   }
 }

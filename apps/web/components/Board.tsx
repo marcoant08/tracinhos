@@ -8,9 +8,9 @@ const CELL = 56;
 const PAD = 28;
 const DOT_HIT = 22;
 const GLOW_HEX = {
-  green: "#2f9e5f",
-  orange: "#e06b20",
-  red: "#d64545",
+  blue: COLOR_HEX.blue,
+  orange: COLOR_HEX.orange,
+  red: COLOR_HEX.red,
 } as const;
 
 type Edge = { orientation: "h" | "v"; row: number; col: number };
@@ -20,11 +20,13 @@ export function Board({
   room,
   canDraw,
   glow,
+  flash,
   onDraw,
 }: {
   room: PublicRoom;
   canDraw: boolean;
-  glow?: "green" | "orange" | "red" | null;
+  glow?: "blue" | "orange" | "red" | null;
+  flash?: "blue" | "orange" | "red" | null;
   onDraw: (edge: Edge) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -132,12 +134,12 @@ export function Board({
         preserveAspectRatio="xMidYMid meet"
         style={{ aspectRatio: `${width} / ${height}` }}
       >
-        {glow ? (
-          <g key={glow} className="board-glow" style={{ animationDuration: `${BOARD_GLOW_MS}ms` }}>
+        {flash ? (
+          <g key={flash} className="board-glow" style={{ animationDuration: `${BOARD_GLOW_MS}ms` }}>
             <defs>
               <radialGradient id="turn-glow" cx="50%" cy="50%" r="68%">
-                <stop offset="35%" stopColor={GLOW_HEX[glow]} stopOpacity="0" />
-                <stop offset="100%" stopColor={GLOW_HEX[glow]} stopOpacity="0.55" />
+                <stop offset="35%" stopColor={GLOW_HEX[flash]} stopOpacity="0" />
+                <stop offset="100%" stopColor={GLOW_HEX[flash]} stopOpacity="0.55" />
               </radialGradient>
             </defs>
             <rect
@@ -149,19 +151,21 @@ export function Board({
               fill="url(#turn-glow)"
               pointerEvents="none"
             />
-            <rect
-              x="3"
-              y="3"
-              width={width - 6}
-              height={height - 6}
-              rx="13"
-              fill="none"
-              stroke={GLOW_HEX[glow]}
-              strokeWidth="4"
-              opacity="0.9"
-              pointerEvents="none"
-            />
           </g>
+        ) : null}
+        {glow ? (
+          <rect
+            className="board-turn-border"
+            x="3"
+            y="3"
+            width={width - 6}
+            height={height - 6}
+            rx="13"
+            fill="none"
+            stroke={GLOW_HEX[glow]}
+            strokeWidth="4"
+            pointerEvents="none"
+          />
         ) : null}
         {board.owners.map((row, r) =>
           row.map((owner, c) => {
