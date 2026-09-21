@@ -25,7 +25,7 @@ Paleta de jogadores (hex de tela, ids iguais ao domínio):
 
 **Identidade na UI:** bolinha da cor **maior** que o texto ao lado (≥ 14px de diâmetro no HUD/listas; ≥ 18px na tela de resultado). Contraste visível sobre o fundo escuro.
 
-**Placar:** em cada linha, **nick e números separados** — nick à esquerda (pode truncar); à direita **dois contadores tabulares**: quadrados (`scores`) e traços (arestas com aquele `playerId`). Não colar `Marco 0`. Sufixos curtos `□` e `─` (com `aria-label` “quadrados” / “traços”). Mesmo padrão no HUD e na tela de resultado. Vencer continua sendo por quadrados.
+**Placar:** em cada linha, **nick e números separados** — nick à esquerda (pode truncar); à direita **dois contadores tabulares**: quadrados (`scores`) e traços (arestas com aquele `playerId`). Não colar `Marco 0`. Sufixos: **quadrado e mini-traço do mesmo tamanho** (13px); o traço tem bolinha em cada ponta. `aria-label` “quadrados” / “traços”. Mesmo padrão no HUD e na tela de resultado. Vencer continua sendo por quadrados.
 
 ## `/` Lobby
 
@@ -63,7 +63,7 @@ HUD fixo no topo (não rola com o tabuleiro), **altura constante**:
 
 - Vez: “Vez de {nick}” + bolinha da cor **grande**. Se for você: destaque “Sua vez”.
 - **Tempo (humano e bot):** número `{n}s` + **borda/anel**. Humano: 25s cheio → 0. Bot: 1s cheio → 0 (`BOT_THINK_MS`). Sempre visível enquanto `playing` e há `turnDeadlineAt`. Cada lance de bot só sai **depois** de 1 s com o snapshot já na tela (nome no HUD + traço anterior visível); nunca empilha 2–3 bots no mesmo frame.
-- Placar: uma linha por jogador — cor grande + nick (esquerda) + **quadrados `□` e traços `─`** (direita, separados). Quem está na vez: nick **negrito** e `👈` imediatamente após o nome (ex.: `Marco 👈`). As outras linhas iguais. Altura do bloco de placar não salta.
+- Placar: uma linha por jogador — cor grande + nick (esquerda) + **quadrados `□` e traços (mini-linha com bolinhas nas pontas)** (direita, separados). Quem está na vez: nick **negrito** e `👈` imediatamente após o nome (ex.: `Marco 👈`). As outras linhas iguais. Altura do bloco de placar não salta.
 
 Entre o placar e o tabuleiro, o mesmo vão que entre o indicador de vez (“Sua vez”) e os nomes.
 
@@ -88,7 +88,7 @@ Quando o snapshot chega `finished`, a UI **permanece na partida 3 s** (`RESULT_H
 
 - Título “Fim de jogo”.
 - Nome(s) do vencedor em destaque (cor + nick). Empate: “Empate” + os nicks destacados.
-- Placar completo no mesmo layout (nick | quadrados `□` | traços `─`), vencedor(es) visualmente acima / com peso maior.
+- Placar completo no mesmo layout (nick | quadrados `□` | traços com bolinhas), vencedor(es) visualmente acima / com peso maior.
 - Link ou botão “Nova sala” → `/`.
 
 ### gone

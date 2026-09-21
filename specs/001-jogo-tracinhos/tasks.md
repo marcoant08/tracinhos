@@ -67,7 +67,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Vinheta no papel: acende e apaga **uma vez** (~1 s) e volta ao normal.
 - [x] Relógio (anel + número) também na vez do bot; `turnDeadlineAt` preenchido.
 - [x] Placar: vez atual em negrito + `👈`.
-- [x] Placar HUD/resultado: quadrados `□` e traços `─` por jogador.
+- [x] Placar HUD/resultado: quadrados `□` e traços com bolinhas nas pontas.
 - [x] Cliente segura o tabuleiro `RESULT_HOLD_MS` (3 s) antes do resultado; F5 em `finished` pula.
 - [x] Bot pensa `BOT_THINK_MS` (1 s) **depois de publicar** cada snapshot; `/regras` diz 1 s. Traço do humano pinta na hora (otimista).
 - [x] Traço otimista permanece até o snapshot; sem poll de 1,5 s que apagava o lance.

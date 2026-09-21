@@ -355,16 +355,45 @@ select:focus {
 
 .score-stat {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 6px;
   min-width: 2.6em;
 }
 
 .score-unit {
-  font-size: 0.72rem;
-  font-weight: 700;
-  opacity: 0.65;
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+
+.score-square {
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-radius: 1px;
+}
+
+.score-stroke {
+  display: inline-flex;
+  align-items: center;
+  width: 13px;
+  height: 13px;
+}
+
+.score-stroke-dot {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.score-stroke-line {
+  flex: 1;
+  height: 1.5px;
+  margin: 0 -0.5px;
+  background: currentColor;
 }
 
 .chip {
