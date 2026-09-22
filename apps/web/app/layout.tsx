@@ -4,6 +4,17 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Tracinhos",
   description: "Ligue os pontos, feche os quadrados.",
+  openGraph: {
+    title: "Tracinhos",
+    description: "Ligue os pontos, feche os quadrados.",
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tracinhos",
+    description: "Ligue os pontos, feche os quadrados.",
+  },
 };
 
 export const viewport: Viewport = {

@@ -16,6 +16,7 @@ import {
 } from "@tracinhos/shared";
 import { Board } from "./Board";
 import { ColorPicker } from "./ColorPicker";
+import { ScoreSquare, ScoreStroke } from "./Marks";
 import { Toast } from "./Toast";
 import { clearSession, loadIdentity, loadSession, saveIdentity, saveSession } from "@/lib/session";
 
@@ -560,20 +561,11 @@ function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }
             <span className="score-stats">
               <span className="score-stat" aria-label={`${squares} ${squares === 1 ? "quadrado" : "quadrados"}`}>
                 <span className="score-pts">{squares}</span>
-                <span className="score-unit score-square" aria-hidden="true">
-                  <span className="score-square-dot" />
-                  <span className="score-square-dot" />
-                  <span className="score-square-dot" />
-                  <span className="score-square-dot" />
-                </span>
+                <ScoreSquare className="score-unit" />
               </span>
               <span className="score-stat" aria-label={`${lines} ${lines === 1 ? "traço" : "traços"}`}>
                 <span className="score-pts">{lines}</span>
-                <span className="score-unit score-stroke" aria-hidden="true">
-                  <span className="score-stroke-dot" />
-                  <span className="score-stroke-line" />
-                  <span className="score-stroke-dot" />
-                </span>
+                <ScoreStroke className="score-unit" />
               </span>
             </span>
           </div>

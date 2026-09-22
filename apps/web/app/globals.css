@@ -53,9 +53,20 @@ select {
 }
 
 .brand h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
   margin: 0;
   font-size: 2.1rem;
   letter-spacing: -0.04em;
+}
+
+.brand-mark {
+  display: block;
+  width: 0.95em;
+  height: 0.95em;
+  flex: 0 0 auto;
+  color: var(--paper);
 }
 
 .brand p {
@@ -375,68 +386,9 @@ select:focus {
 }
 
 .score-unit {
+  display: block;
   flex: 0 0 auto;
   opacity: 0.75;
-}
-
-.score-square {
-  --score-stroke: 1.5px;
-  position: relative;
-  box-sizing: border-box;
-  width: 13px;
-  height: 13px;
-  box-shadow: inset 0 0 0 var(--score-stroke) currentColor;
-}
-
-.score-square-dot {
-  position: absolute;
-  width: 3.5px;
-  height: 3.5px;
-  border-radius: 50%;
-  background: currentColor;
-  transform: translate(-50%, -50%);
-}
-
-.score-square-dot:nth-child(1) {
-  top: calc(var(--score-stroke) / 2);
-  left: calc(var(--score-stroke) / 2);
-}
-
-.score-square-dot:nth-child(2) {
-  top: calc(var(--score-stroke) / 2);
-  left: calc(100% - var(--score-stroke) / 2);
-}
-
-.score-square-dot:nth-child(3) {
-  top: calc(100% - var(--score-stroke) / 2);
-  left: calc(var(--score-stroke) / 2);
-}
-
-.score-square-dot:nth-child(4) {
-  top: calc(100% - var(--score-stroke) / 2);
-  left: calc(100% - var(--score-stroke) / 2);
-}
-
-.score-stroke {
-  display: inline-flex;
-  align-items: center;
-  width: 13px;
-  height: 13px;
-}
-
-.score-stroke-dot {
-  width: 3.5px;
-  height: 3.5px;
-  border-radius: 50%;
-  background: currentColor;
-  flex: 0 0 auto;
-}
-
-.score-stroke-line {
-  flex: 1;
-  height: 1.5px;
-  margin: 0 -0.5px;
-  background: currentColor;
 }
 
 .chip {
