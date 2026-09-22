@@ -79,8 +79,16 @@ export function toPublic(room: Room): PublicRoom {
 }
 
 export async function getPublicRoom(code: string): Promise<PublicRoom> {
-  const room = await mustRoom(code);
-  return toPublic(sweep(room));
+  const peek = sweep(await mustRoom(code));
+  if (!isTurnOverdue(peek)) return toPublic(peek);
+
+  const result = await mutate(code, async (room) => {
+    const timedOut = advanceOverdueTurn(room);
+    return { timedOut };
+  });
+  if (result.timedOut) publishTimeoutNotice(code, result.timedOut);
+  armClocks(code, result.room);
+  return result.room;
 }
 
 export async function createRoom(input: {
@@ -515,6 +523,32 @@ function refreshTurnDeadline(room: Room) {
   }
 }
 
+function isTurnOverdue(room: Room): boolean {
+  return (
+    room.status === "playing" &&
+    room.game?.status === "playing" &&
+    typeof room.turnDeadlineAt === "number" &&
+    Date.now() >= room.turnDeadlineAt
+  );
+}
+
+function playDueBotMove(room: Room): boolean {
+  if (!isTurnOverdue(room) || !room.game) return false;
+  const seat = currentSeat(room);
+  if (!seat || seat.kind !== "bot") return false;
+  room.game = applyMove(room.game, seat.id, pickBotMove(room.game, Math.random)).state;
+  if (room.game.status === "finished") room.status = "finished";
+  refreshTurnDeadline(room);
+  return true;
+}
+
+function advanceOverdueTurn(room: Room): { playerId: string; nick: string } | null {
+  const timedOut = expireIfNeeded(room);
+  if (timedOut) return timedOut;
+  playDueBotMove(room);
+  return null;
+}
+
 function expireIfNeeded(room: Room): { playerId: string; nick: string } | null {
   if (!room.turnDeadlineAt || Date.now() < room.turnDeadlineAt) return null;
   const seat = currentSeat(room);
@@ -556,7 +590,10 @@ function armClocks(code: string, room: PublicRoom) {
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
   if (room.status === "playing" && room.game?.status === "playing" && current?.kind === "bot") {
-    queueBotTurns(normalized, BOT_THINK_MS);
+    const wait = room.turnDeadlineAt
+      ? Math.max(0, room.turnDeadlineAt - Date.now())
+      : BOT_THINK_MS;
+    queueBotTurns(normalized, wait);
   } else {
     clearBotTimer(normalized);
   }
@@ -623,6 +660,7 @@ async function playOneBotMove(code: string): Promise<void> {
       const id = room.game.playerIds[room.game.currentPlayerIndex] ?? "";
       const player = room.players.find((p) => p.id === id);
       if (!player || player.kind !== "bot") return { again: false };
+      if (room.turnDeadlineAt && Date.now() < room.turnDeadlineAt) return { again: false };
       room.game = applyMove(room.game, player.id, pickBotMove(room.game, Math.random)).state;
       if (room.game.status === "finished") room.status = "finished";
       refreshTurnDeadline(room);

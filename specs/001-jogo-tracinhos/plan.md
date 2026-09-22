@@ -75,3 +75,4 @@ Nick/cor: grava depois de criar ou entrar com sucesso. `cols`/`rows`: grava ao s
 
 - `maxDuration` da Vercel fecha o WS: o cliente reconecta e resume.
 - Duas instâncias: o publish in-process não atravessa (Vercel). **Lobby e partida:** GET a cada `LOBBY_POLL_MS` (1 s), aba visível. `updatedAt` evita GET velho. Sem poll no resultado.
+- `setTimeout` de bot/timeout não sobrevive ao isolate da Vercel. O GET do poll avança no máximo um turno com `turnDeadlineAt` vencido.

@@ -75,7 +75,7 @@ status: "playing" | "finished"
 winnerIds: string[]       // vazio enquanto playing
 ```
 
-`turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`. `updatedAt` (snapshot público) é epoch ms da última mutação. Em `lobby` e `playing` o cliente GET a cada `LOBBY_POLL_MS` (aba visível): o pub/sub é in-process e na Vercel o WS de outro isolate não recebe o lance.
+`turnDeadlineAt` mora na **sala** (não no `GameState`): epoch ms do fim desta vez. Humano: `now + TURN_TIMEOUT_MS`. Bot: `now + BOT_THINK_MS`. Sempre preenchido em `playing`; `null` em `lobby` / `finished`. `updatedAt` (snapshot público) é epoch ms da última mutação. Em `lobby` e `playing` o cliente GET a cada `LOBBY_POLL_MS` (aba visível): o pub/sub é in-process e na Vercel o WS de outro isolate não recebe o lance. O `setTimeout` do bot/timeout mora no isolate e morre na Vercel; o GET, se o prazo já passou, avança **no máximo um** turno vencido (lance do bot ou timeout humano) e grava o novo `turnDeadlineAt`.
 
 `createGame(cols, playerIds, rows = cols)` inicializa arestas e donos `null`, scores 0, `currentPlayerIndex = 0`, `status = "playing"`. No `start` a sala coloca `currentPlayerIndex` em quem o host escolheu (`starterPlayerId`) ou num índice aleatório. A sala define o prazo no `start` e a cada lance.
 
@@ -126,7 +126,7 @@ Se o humano estoura `TURN_TIMEOUT_MS` sem `game:draw`, a sala aplica `applyMove`
 3. Senão pontua cada legal por quantos quadrados **abertos com 3 lados** o lance deixa (presente para o próximo). Prefere 0. Se todos deixam ≥ 1, escolhe o menor número.
 4. Empate: aleatória entre as melhores (ou a primeira se `random` omitido).
 
-O **servidor** (não o motor) espera **1 s cheio** (`BOT_THINK_MS`) **depois de publicar** a vez do bot, para o HUD e o tabuleiro atualizarem antes do lance. Não usa o tempo que “sobrou” no relógio (isso empilhava vários bots no mesmo frame). Extra (fechou quadrado): espera de novo 1 s.
+O **servidor** (não o motor) espera **1 s cheio** (`BOT_THINK_MS`) **depois de publicar** a vez do bot, para o HUD e o tabuleiro atualizarem antes do lance. Localmente isso é `setTimeout`; na Vercel o isolate some e o GET do poll aplica o lance quando `turnDeadlineAt` já passou. Nunca aplica 2 lances de bot no mesmo GET. Extra (fechou quadrado): espera de novo 1 s (ou o próximo poll).
 
 ## Tempo da vez
 

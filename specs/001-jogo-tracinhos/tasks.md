@@ -35,6 +35,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] Tipos do contrato; `resumed_elsewhere`.
 - [x] Cliente: persistir sessão, resume no boot, backoff.
 - [x] Lobby, join e partida buscam o snapshot a cada `LOBBY_POLL_MS` (Vercel: WS não cruza isolate).
+- [x] GET da partida avança no máximo um turno vencido (bot/timeout): o `setTimeout` do isolate morre na Vercel.
 - [x] Vez/clique pelo snapshot do servidor (traço otimista só pinta).
 
 ## 5. UI — [ui.md](ui.md)
