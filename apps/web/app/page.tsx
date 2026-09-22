@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { TALL_GRID } from "@tracinhos/game";
 import { COLOR_IDS, type ColorId } from "@tracinhos/shared";
 import { ColorPicker } from "@/components/ColorPicker";
-import { ScoreStroke } from "@/components/Marks";
 import { Toast } from "@/components/Toast";
 import { loadGridPref, loadIdentity, saveGridPref, saveIdentity, saveSession } from "@/lib/session";
 
@@ -86,10 +85,6 @@ export default function HomePage() {
   return (
     <main className="page">
       <header className="brand">
-        <h1>
-          Tracinhos
-          <ScoreStroke className="brand-mark" />
-        </h1>
         <p>Ligue os pontos. Feche o quadrado. Jogue de novo.</p>
         <a className="text-link" href="/regras">
           Regras do jogo
