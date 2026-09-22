@@ -590,7 +590,7 @@ function Results({ room }: { room: PublicRoom }) {
 
   return (
     <div className="results">
-      <h2 className="results-title">{draw ? "Empate" : "Venceu"}</h2>
+      <h2 className="results-title">{draw ? "Empate" : "Vencedor"}</h2>
       <ul className="results-winners">
         {winnerNames.map((p) => (
           <li key={p.id} style={nickTile(p.color)}>
