@@ -5,7 +5,6 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const paper = "#f4e8d4";
-const ink = "#2b2118";
 const bg = "#1a1410";
 
 function Dot() {
@@ -16,9 +15,7 @@ function Dot() {
         width: 92,
         height: 92,
         borderRadius: 46,
-        background: "#fff",
-        border: `10px solid ${ink}`,
-        boxShadow: `0 0 0 4px ${paper}`,
+        background: paper,
       }}
     />
   );

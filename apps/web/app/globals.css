@@ -550,7 +550,11 @@ select:focus {
   stroke-width: 1.75;
 }
 
-.board-dot-selected,
+.board-dot-selected {
+  fill: #2f6fed;
+  animation: blink-dot 0.7s ease-in-out infinite;
+}
+
 .board-dot-target {
   animation: blink-dot 0.7s ease-in-out infinite;
 }
