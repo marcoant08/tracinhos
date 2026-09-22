@@ -24,7 +24,9 @@ export async function handleRest(
 
     const roomMatch = pathname.match(/^\/api\/rooms\/([^/]+)$/);
     if (req.method === "GET" && roomMatch) {
-      return send(res, 200, await getPublicRoom(decodeURIComponent(roomMatch[1])));
+      const header = req.headers["x-seat-token"];
+      const seatToken = Array.isArray(header) ? header[0] : header;
+      return send(res, 200, await getPublicRoom(decodeURIComponent(roomMatch[1]), seatToken));
     }
 
     const joinMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/join$/);

@@ -120,8 +120,10 @@ Humano some: a partida não trava.
 
 **Aceite**
 
-- Após 30s desconectado, o assento vira bot (mantém nick/cor/`playerId`).
-- Se for a vez dele, o bot joga.
+- Após 30s **sem presença** (WS da conexão atual e sem GET/lance com o token), o assento vira bot (mantém nick/cor/`playerId`).
+- Fechar o WS num isolate velho **não** marca desconexão se a pessoa já deu resume noutro isolate (`wsEpoch`).
+- GET com `x-seat-token` conta como presença e devolve humano se o assento tinha virado bot por desconexão.
+- Se for a vez dele e já for bot, o bot joga.
 - Resume no prazo devolve `kind: human` ao dono do token.
 
 ### 9. Mobile

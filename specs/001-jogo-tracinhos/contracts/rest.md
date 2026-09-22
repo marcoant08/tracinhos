@@ -4,7 +4,7 @@ Base: `/api`. JSON. Sem autenticação além do `seatToken` quando exigido.
 
 ## `GET /api/rooms/:code`
 
-Snapshot público da sala (sem tokens). Em `lobby` e `playing` o cliente busca a cada `LOBBY_POLL_MS` (aba visível): na Vercel o WS não entrega o lance para outro isolate. Em `playing`, se `turnDeadlineAt` já passou, o GET aplica **um** turno vencido (bot ou timeout humano) e devolve o snapshot novo.
+Snapshot público da sala (sem tokens). Em `lobby` e `playing` o cliente busca a cada `LOBBY_POLL_MS` (aba visível): na Vercel o WS não entrega o lance para outro isolate. Header opcional `x-seat-token`: presença do assento (impede virar bot enquanto a aba poll). Em `playing`, se `turnDeadlineAt` já passou, o GET aplica **um** turno vencido (bot ou timeout humano) e devolve o snapshot novo.
 
 **200**
 

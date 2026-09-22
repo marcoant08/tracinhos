@@ -26,6 +26,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 - [x] start / addBot (só host).
 - [x] draw + bot loop até vez humana ou fim.
 - [x] Disconnect 30s → bot; resume → humano.
+- [x] `wsEpoch` no disconnect/promote; GET `x-seat-token` e draw devolvem humano (Vercel: isolate velho não transforma quem ainda está jogando).
 - [x] Lock + pub/sub.
 - [x] Delay do bot 1–2 s; timeout 40 s marca traço aleatório (servidor).
 

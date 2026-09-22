@@ -167,16 +167,18 @@ Assento:
 ```
 id, nick, color, kind: "human" | "bot",
 connected: boolean,
-disconnectedAt: number | null
+disconnectedAt: number | null,
+wsEpoch: number
 ```
 
 Transições de assento:
 
-- join (lobby): cria humano `connected=true`.
-- addBot (lobby, host, < 5): cria bot com nick de `BOT_NICKS` (ou fallback) e primeira cor livre.
-- disconnect: `connected=false`, `disconnectedAt=now`.
-- após 30s desconectado: `kind="bot"` (mesmo id/nick/cor).
-- resume com token válido: `kind="human"`, `connected=true`, `disconnectedAt=null`.
+- join (lobby): cria humano `connected=true`, `wsEpoch=1`.
+- addBot (lobby, host, < 5): cria bot com nick de `BOT_NICKS` (ou fallback) e primeira cor livre. `wsEpoch=0`.
+- disconnect do WS: `connected=false`, `disconnectedAt=now` **só se** `wsEpoch` ainda é o da conexão que fechou.
+- GET com `x-seat-token` ou `game:draw`: presença — `kind=human`, `connected=true`, `disconnectedAt=null` (não mexe no `wsEpoch`).
+- após 30s desconectado (e sem presença): `kind="bot"` (mesmo id/nick/cor), e só se o `wsEpoch` do timer ainda bate.
+- resume com token válido: `kind="human"`, `connected=true`, `disconnectedAt=null`, `wsEpoch += 1`.
 
 ## Invariantes
 

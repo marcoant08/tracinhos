@@ -39,6 +39,7 @@ export type Seat = {
   kind: PlayerKind;
   connected: boolean;
   disconnectedAt: number | null;
+  wsEpoch: number;
 };
 
 export type Room = {
@@ -78,11 +79,24 @@ export function toPublic(room: Room): PublicRoom {
   };
 }
 
-export async function getPublicRoom(code: string): Promise<PublicRoom> {
+export async function getPublicRoom(code: string, seatToken?: string | null): Promise<PublicRoom> {
+  let actorId: string | undefined;
+  if (seatToken) {
+    try {
+      actorId = await actorFromToken(code, seatToken);
+    } catch {
+      actorId = undefined;
+    }
+  }
   const peek = sweep(await mustRoom(code));
-  if (!isTurnOverdue(peek)) return toPublic(peek);
+  const needsTouch = Boolean(actorId && seatNeedsTouch(peek, actorId));
+  if (!needsTouch && !isTurnOverdue(peek)) return toPublic(peek);
 
   const result = await mutate(code, async (room) => {
+    const reclaimed = actorId ? touchSeat(room, actorId) : false;
+    if (reclaimed && currentSeat(room)?.id === actorId) {
+      refreshTurnDeadline(room);
+    }
     const timedOut = advanceOverdueTurn(room);
     return { timedOut };
   });
@@ -125,6 +139,7 @@ export async function createRoom(input: {
         kind: "human",
         connected: true,
         disconnectedAt: null,
+        wsEpoch: 1,
       },
     ],
     game: null,
@@ -141,7 +156,7 @@ export async function createRoom(input: {
 export async function joinRoom(
   code: string,
   input: { nick: string; color: string },
-): Promise<{ room: PublicRoom; session: Session }> {
+): Promise<{ room: PublicRoom; session: Session; wsEpoch: number }> {
   const playerId = randomUUID();
   const seatToken = newToken();
   const result = await mutate(code, async (room) => {
@@ -157,9 +172,10 @@ export async function joinRoom(
       kind: "human",
       connected: true,
       disconnectedAt: null,
+      wsEpoch: 1,
     });
     await saveSeat(seatToken, room.code, playerId);
-    return { seatToken, playerId };
+    return { seatToken, playerId, wsEpoch: 1 };
   });
   const player = result.room.players.find((p) => p.id === playerId)!;
   return {
@@ -171,13 +187,14 @@ export async function joinRoom(
       color: player.color,
       roomCode: result.room.code,
     },
+    wsEpoch: result.wsEpoch,
   };
 }
 
 export async function resumeRoom(
   code: string,
   seatToken: string,
-): Promise<{ room: PublicRoom; session: Session }> {
+): Promise<{ room: PublicRoom; session: Session; wsEpoch: number }> {
   const seat = await loadSeat(seatToken);
   if (!seat || seat.roomCode !== normalizeCode(code)) {
     throw new RoomError("invalid_token");
@@ -188,7 +205,8 @@ export async function resumeRoom(
     player.kind = "human";
     player.connected = true;
     player.disconnectedAt = null;
-    return { playerId: player.id };
+    player.wsEpoch = (player.wsEpoch ?? 0) + 1;
+    return { playerId: player.id, wsEpoch: player.wsEpoch };
   });
   const player = publicRoom.room.players.find((p) => p.id === seat.playerId)!;
   return {
@@ -200,6 +218,7 @@ export async function resumeRoom(
       color: player.color,
       roomCode: publicRoom.room.code,
     },
+    wsEpoch: publicRoom.wsEpoch,
   };
 }
 
@@ -218,6 +237,7 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
       kind: "bot",
       connected: true,
       disconnectedAt: null,
+      wsEpoch: 0,
     });
     return {};
   });
@@ -285,6 +305,10 @@ export async function drawEdge(
     if (room.status !== "playing" || !room.game) {
       throw new RoomError("illegal_move");
     }
+    const reclaimed = touchSeat(room, actorId);
+    if (reclaimed && currentSeat(room)?.id === actorId) {
+      refreshTurnDeadline(room);
+    }
     const timedOut = expireIfNeeded(room);
     if (timedOut) return { skipped: true, timedOut };
     try {
@@ -303,11 +327,16 @@ export async function drawEdge(
   return result.room;
 }
 
-export async function markDisconnected(code: string, playerId: string): Promise<PublicRoom | null> {
+export async function markDisconnected(
+  code: string,
+  playerId: string,
+  wsEpoch: number,
+): Promise<PublicRoom | null> {
   try {
     const result = await mutate(code, async (room) => {
       const player = room.players.find((p) => p.id === playerId);
       if (!player || player.kind === "bot") return {};
+      if (player.wsEpoch !== wsEpoch) return {};
       player.connected = false;
       player.disconnectedAt = Date.now();
       return {};
@@ -322,14 +351,17 @@ export async function markDisconnected(code: string, playerId: string): Promise<
 export async function promoteDisconnectedToBot(
   code: string,
   playerId: string,
+  wsEpoch: number,
 ): Promise<PublicRoom | null> {
   try {
     const room = await mustRoom(code);
     const player = room.players.find((p) => p.id === playerId);
-    if (!player || player.kind === "bot" || player.connected) return toPublic(room);
+    if (!player || player.kind === "bot" || player.connected || player.wsEpoch !== wsEpoch) {
+      return toPublic(room);
+    }
     const result = await mutate(code, async (next) => {
       const seat = next.players.find((p) => p.id === playerId);
-      if (!seat || seat.kind === "bot" || seat.connected) return {};
+      if (!seat || seat.kind === "bot" || seat.connected || seat.wsEpoch !== wsEpoch) return {};
       seat.kind = "bot";
       refreshTurnDeadline(next);
       return {};
@@ -416,7 +448,14 @@ function hydrateRoom(room: Room & { size?: number }): Room {
           cols: typeof room.size === "number" ? room.size : DEFAULT_SIZE,
           rows: typeof room.size === "number" ? room.size : DEFAULT_SIZE,
         };
-  return { ...withGrid, starterPlayerId: withGrid.starterPlayerId ?? null };
+  return {
+    ...withGrid,
+    starterPlayerId: withGrid.starterPlayerId ?? null,
+    players: withGrid.players.map((p) => ({
+      ...p,
+      wsEpoch: typeof p.wsEpoch === "number" ? p.wsEpoch : 0,
+    })),
+  };
 }
 
 async function saveRoom(room: Room): Promise<void> {
@@ -498,6 +537,22 @@ function sweep(room: Room): Room {
     }
   }
   return room;
+}
+
+function seatNeedsTouch(room: Room, playerId: string): boolean {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) return false;
+  return player.kind !== "human" || !player.connected || player.disconnectedAt !== null;
+}
+
+function touchSeat(room: Room, playerId: string): boolean {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) return false;
+  const changed = seatNeedsTouch(room, playerId);
+  player.kind = "human";
+  player.connected = true;
+  player.disconnectedAt = null;
+  return changed;
 }
 
 const botTimers = new Map<string, ReturnType<typeof setTimeout>>();

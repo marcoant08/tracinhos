@@ -4,9 +4,9 @@ import { handle } from "@/lib/api";
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ code: string }> },
 ) {
   const { code } = await context.params;
-  return handle(() => getPublicRoom(code));
+  return handle(() => getPublicRoom(code, request.headers.get("x-seat-token")));
 }

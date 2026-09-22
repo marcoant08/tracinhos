@@ -51,7 +51,11 @@ export function RoomApp({ code }: { code: string }) {
 
   async function refreshRoom() {
     try {
-      const res = await fetch(`/api/rooms/${roomCode}`, { cache: "no-store" });
+      const token = loadSession(roomCode)?.seatToken;
+      const res = await fetch(`/api/rooms/${roomCode}`, {
+        cache: "no-store",
+        headers: token ? { "x-seat-token": token } : {},
+      });
       if (res.status === 404) {
         setRoom(null);
         return null;

@@ -29,6 +29,7 @@ type Binding = {
   roomCode: string;
   playerId: string;
   seatToken: string;
+  wsEpoch: number;
 };
 
 const byToken = new Map<string, Binding>();
@@ -42,13 +43,18 @@ function clearBotAfterDisconnect(seatToken: string) {
   botAfterDisconnect.delete(seatToken);
 }
 
-function scheduleBotAfterDisconnect(roomCode: string, playerId: string, seatToken: string) {
+function scheduleBotAfterDisconnect(
+  roomCode: string,
+  playerId: string,
+  seatToken: string,
+  wsEpoch: number,
+) {
   clearBotAfterDisconnect(seatToken);
   botAfterDisconnect.set(
     seatToken,
     setTimeout(() => {
       botAfterDisconnect.delete(seatToken);
-      void promoteDisconnectedToBot(roomCode, playerId);
+      void promoteDisconnectedToBot(roomCode, playerId, wsEpoch);
     }, DISCONNECT_TO_BOT_MS),
   );
 }
@@ -116,7 +122,12 @@ export function bindSocket(socket: SocketLike) {
           nick: message.nick,
           color: message.color,
         });
-        await attach(result.session.roomCode, result.session.playerId, result.session.seatToken);
+        await attach(
+          result.session.roomCode,
+          result.session.playerId,
+          result.session.seatToken,
+          result.wsEpoch,
+        );
         send(socket, { type: "session", session: result.session });
         send(socket, { type: "game:state", room: result.room });
         return;
@@ -124,7 +135,12 @@ export function bindSocket(socket: SocketLike) {
 
       if (message.type === "room:resume") {
         const result = await resumeRoom(message.roomCode, message.seatToken);
-        await attach(result.session.roomCode, result.session.playerId, result.session.seatToken);
+        await attach(
+          result.session.roomCode,
+          result.session.playerId,
+          result.session.seatToken,
+          result.wsEpoch,
+        );
         send(socket, { type: "session", session: result.session });
         send(socket, {
           type: result.room.status === "finished" ? "game:over" : "game:state",
@@ -177,14 +193,14 @@ export function bindSocket(socket: SocketLike) {
     }
   };
 
-  async function attach(roomCode: string, playerId: string, seatToken: string) {
+  async function attach(roomCode: string, playerId: string, seatToken: string, wsEpoch: number) {
     const previous = byToken.get(seatToken);
     if (previous && previous.socket !== socket) {
       send(previous.socket, { type: "resumed_elsewhere" });
       previous.socket.close();
     }
     if (binding) removeFromRoom(binding.roomCode, socket);
-    binding = { socket, roomCode: roomKey(roomCode), playerId, seatToken };
+    binding = { socket, roomCode: roomKey(roomCode), playerId, seatToken, wsEpoch };
     byToken.set(seatToken, binding);
     addToRoom(roomCode, socket);
     clearBotAfterDisconnect(seatToken);
@@ -203,8 +219,13 @@ export function bindSocket(socket: SocketLike) {
     if (!binding) return;
     if (byToken.get(binding.seatToken)?.socket === socket) {
       byToken.delete(binding.seatToken);
-      void markDisconnected(binding.roomCode, binding.playerId);
-      scheduleBotAfterDisconnect(binding.roomCode, binding.playerId, binding.seatToken);
+      void markDisconnected(binding.roomCode, binding.playerId, binding.wsEpoch);
+      scheduleBotAfterDisconnect(
+        binding.roomCode,
+        binding.playerId,
+        binding.seatToken,
+        binding.wsEpoch,
+      );
     }
     removeFromRoom(binding.roomCode, socket);
   });
