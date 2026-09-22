@@ -9,3 +9,27 @@ dist
 .DS_Store
 coverage
 *.tsbuildinfo
+.cursor/
+
+# Impeccable: local runtime state (skill lives in .cursor, not in git)
+**/skills/impeccable/scripts/bin/
+**/skills/impeccable/scripts/config.json
+.impeccable/config.local.json
+.impeccable/history/
+.impeccable/live/server.json
+.impeccable/live/sessions/
+.impeccable/live/previews/
+.impeccable/live/annotations/
+.impeccable/live/artifacts/
+.impeccable/live/accept-receipts/
+.impeccable/live/locks/
+.impeccable/live/cache/
+.impeccable/live/benchmarks/
+.impeccable/live/manual-edit-apply-transaction.json
+.impeccable/live/manual-edit-events.jsonl
+.impeccable/live/manual-edit-evidence/
+.impeccable/live/pending-manual-edits.json
+.impeccable/critique/*
+!.impeccable/critique/ignore.md
+**/.impeccable/hook.cache.json
+**/.impeccable/hook.pending.json
