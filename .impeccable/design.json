@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T04:17:00.000Z",
+  "title": "Design System: Tracinhos",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Night Navy",
+        "canonical": "oklch(27.9% 0.079 264.1)",
+        "tonalRamp": ["#00052c", "#10214a", "#2d416c", "#4c6291", "#6e86b6", "#92abde", "#b4ceff", "#d4efff"]
+      },
+      "bg-2": {
+        "role": "neutral",
+        "displayName": "Shelf Navy",
+        "canonical": "oklch(34.6% 0.107 264.7)",
+        "tonalRamp": ["#000037", "#091d56", "#253e7a", "#4561a0", "#6684c7", "#8aaaef", "#abcdff", "#cbeeff"]
+      },
+      "navy-wash": {
+        "role": "neutral",
+        "displayName": "Ceiling Wash",
+        "canonical": "oklch(42.6% 0.125 263.9)",
+        "tonalRamp": ["#01003e", "#031a5f", "#1e3d84", "#3e60aa", "#5f84d1", "#82a9fa", "#a4cdff", "#c4eeff"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper Board",
+        "canonical": "oklch(95.3% 0.016 86.4)",
+        "tonalRamp": ["#0e0b05", "#27241b", "#464239", "#676359", "#8a867c", "#afaaa0", "#d2cdc3", "#f3eee3"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(20.9% 0.017 264.1)",
+        "tonalRamp": ["#080b12", "#20242d", "#3e424c", "#5e636d", "#818691", "#a5abb6", "#c8ced9", "#e9effa"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "oklch(95.9% 0.010 87.5)",
+        "tonalRamp": ["#0d0b07", "#26241f", "#45423d", "#66635d", "#898680", "#adaaa4", "#d0cdc7", "#f1eee7"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Periwinkle Mute",
+        "canonical": "oklch(82.3% 0.055 270.3)",
+        "tonalRamp": ["#040822", "#1a223f", "#374160", "#576283", "#7985a8", "#9daacf", "#c0cdf3", "#e0eeff"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Navy Line",
+        "canonical": "oklch(45.1% 0.106 266.3)",
+        "tonalRamp": ["#010037", "#0c1d56", "#283e7a", "#47609f", "#6884c6", "#8ca9ee", "#aeccff", "#ceedff"]
+      },
+      "cta": {
+        "role": "primary",
+        "displayName": "Electric Yellow",
+        "canonical": "oklch(90.9% 0.165 97.6)",
+        "tonalRamp": ["#1e0200", "#3b1c00", "#5b3d00", "#7e6000", "#a28400", "#c7aa00", "#ebcd2e", "#ffef5b"]
+      },
+      "danger": {
+        "role": "primary",
+        "displayName": "Punch Coral",
+        "canonical": "oklch(69.1% 0.200 18.5)",
+        "tonalRamp": ["#3e0000", "#650000", "#8f0011", "#ba0233", "#e54155", "#ff6b79", "#ff8f9a", "#ffb1ba"]
+      },
+      "nick-ink": {
+        "role": "neutral",
+        "displayName": "Nick Cream",
+        "canonical": "oklch(98.6% 0.014 84.6)",
+        "tonalRamp": ["#0e0b05", "#27241c", "#46423a", "#67635a", "#8a867d", "#afaaa1", "#d2cdc4", "#f3eee4"]
+      },
+      "board-stroke": {
+        "role": "neutral",
+        "displayName": "Board Stroke",
+        "canonical": "oklch(25.7% 0.022 63.6)",
+        "tonalRamp": ["#120903", "#2c2219", "#4b4036", "#6d6156", "#908479", "#b5a89d", "#d9cbbf", "#faece0"]
+      },
+      "board-grid": {
+        "role": "neutral",
+        "displayName": "Board Grid",
+        "canonical": "oklch(88.6% 0.033 76.4)",
+        "tonalRamp": ["#130900", "#2d2211", "#4c402f", "#6e614f", "#928471", "#b7a994", "#dacbb7", "#fbecd7"]
+      },
+      "player-red": {
+        "role": "tertiary",
+        "displayName": "Player Red",
+        "canonical": "oklch(59.7% 0.182 24.5)",
+        "tonalRamp": ["#3b0000", "#610000", "#8a0001", "#b42029", "#de4d4c", "#ff756f", "#ff9991", "#ffbab1"]
+      },
+      "player-blue": {
+        "role": "tertiary",
+        "displayName": "Player Blue",
+        "canonical": "oklch(57.4% 0.202 262.0)",
+        "tonalRamp": ["#0e005f", "#000083", "#002faa", "#1857d3", "#3d7efd", "#61a5ff", "#82c9ff", "#a2ebff"]
+      },
+      "player-green": {
+        "role": "tertiary",
+        "displayName": "Player Green",
+        "canonical": "oklch(62.2% 0.137 154.0)",
+        "tonalRamp": ["#001700", "#003400", "#00551b", "#00793c", "#2e9d5f", "#5ac482", "#7fe8a4", "#a1ffc4"]
+      },
+      "player-yellow": {
+        "role": "tertiary",
+        "displayName": "Player Yellow",
+        "canonical": "oklch(73.5% 0.146 84.3)",
+        "tonalRamp": ["#240000", "#431400", "#653600", "#895800", "#af7c00", "#d6a21b", "#fac54d", "#ffe671"]
+      },
+      "player-purple": {
+        "role": "tertiary",
+        "displayName": "Player Purple",
+        "canonical": "oklch(53.7% 0.179 296.8)",
+        "tonalRamp": ["#1c004b", "#33006d", "#501a93", "#7043bb", "#9369e3", "#b88fff", "#dbb2ff", "#fbd3ff"]
+      },
+      "player-orange": {
+        "role": "tertiary",
+        "displayName": "Player Orange",
+        "canonical": "oklch(65.8% 0.167 47.8)",
+        "tonalRamp": ["#360000", "#5a0000", "#820800", "#aa3900", "#d35f09", "#fd8540", "#ffa966", "#ffca87"]
+      },
+      "player-teal": {
+        "role": "tertiary",
+        "displayName": "Player Teal",
+        "canonical": "oklch(57.7% 0.091 194.9)",
+        "tonalRamp": ["#001417", "#003031", "#005051", "#007373", "#329797", "#5cbdbc", "#81e1e0", "#a2ffff"]
+      },
+      "player-pink": {
+        "role": "tertiary",
+        "displayName": "Player Pink",
+        "canonical": "oklch(63.2% 0.179 348.9)",
+        "tonalRamp": ["#320016", "#560031", "#7e0051", "#a72673", "#d04f97", "#fa75bd", "#ff99e0", "#ffbaff"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Wordmark. Uppercase Anton at the site-title clamp." },
+      "headline": { "displayName": "Headline", "purpose": "Section shouts: Criar sala, Entrar, and page titles." },
+      "title": { "displayName": "Title", "purpose": "Room code, results shout, and timer numerals." },
+      "body": { "displayName": "Body", "purpose": "Lede, rules, and waiting copy in Sora." },
+      "label": { "displayName": "Label", "purpose": "Field labels in periwinkle mute, 700." }
+    },
+    "shadows": [
+      {
+        "name": "pad-selected",
+        "value": "0 6px 16px rgba(0, 0, 0, 0.35)",
+        "purpose": "Chosen color pad, paired with a 3px warm-paper border."
+      },
+      {
+        "name": "nick-tile",
+        "value": "0 8px 18px rgba(0, 0, 0, 0.28)",
+        "purpose": "Lobby list, score rows, and winner pills."
+      },
+      {
+        "name": "turn-ring",
+        "value": "0 0 0 3px #ffe14a",
+        "purpose": "Current-player score row, stacked on the nick-tile drop."
+      },
+      {
+        "name": "paper-board",
+        "value": "0 18px 40px rgba(0, 0, 0, 0.45)",
+        "purpose": "The play table — deepest lift in the system."
+      },
+      {
+        "name": "toast",
+        "value": "0 10px 28px rgba(0, 0, 0, 0.4)",
+        "purpose": "Transient notice at the top-right."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.12s ease",
+        "purpose": "Primary button and color-pad press (scale 0.97, brightness 0.92)."
+      },
+      {
+        "name": "blink-dot",
+        "value": "0.7s ease-in-out infinite",
+        "purpose": "Selected origin and legal target dots on the board."
+      },
+      {
+        "name": "board-glow-flash",
+        "value": "1s ease-in-out forwards",
+        "purpose": "One-shot radial flash when the turn or timeout signal changes."
+      },
+      {
+        "name": "board-border-blink",
+        "value": "1s ease-in-out infinite",
+        "purpose": "4px currentColor frame around the paper while it is your turn."
+      }
+    ],
+    "breakpoints": [
+      { "name": "desktop", "value": "960px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Electric yellow start action — full width, 72px, ink type.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Criar sala</button>",
+      "css": ".ds-btn-primary { width: 100%; min-height: 72px; border: 0; border-radius: 20px; background: var(--cta, #ffe14a); color: var(--cta-ink, #141820); font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-weight: 800; font-size: 1.45rem; letter-spacing: -0.02em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.12s ease; } .ds-btn-primary:hover { filter: brightness(0.96); } .ds-btn-primary:active { transform: scale(0.97); filter: brightness(0.92); } .ds-btn-primary:focus-visible { outline: 3px solid var(--focus, #ffe14a); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action: transparent field, navy-line border.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Copiar link</button>",
+      "css": ".ds-btn-ghost { width: 100%; min-height: 72px; border: 2px solid var(--line, #3a5290); border-radius: 20px; background: transparent; color: var(--text, #f4f1ea); font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-weight: 800; font-size: 1.45rem; letter-spacing: -0.02em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.12s ease; } .ds-btn-ghost:hover { filter: brightness(0.96); } .ds-btn-ghost:active { transform: scale(0.97); filter: brightness(0.92); } .ds-btn-ghost:focus-visible { outline: 3px solid var(--focus, #ffe14a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Shelf-navy field with a 2px navy-line border.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Seu nick</span><input class=\"ds-input\" type=\"text\" value=\"Marco\" maxlength=\"16\" /></label>",
+      "css": ".ds-field { display: block; } .ds-field-label { display: block; font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--muted, #b7c4ea); margin-bottom: 6px; } .ds-input { width: 100%; min-height: 48px; border-radius: 14px; border: 2px solid var(--line, #3a5290); background: var(--bg-2, #1d3570); color: var(--text, #f4f1ea); padding: 0 14px; font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 1.05rem; caret-color: var(--cta, #ffe14a); } .ds-input::placeholder { color: #8ea0d4; } .ds-input:hover { filter: brightness(1.06); } .ds-input:focus-visible { outline: 3px solid var(--focus, #ffe14a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Color Pad",
+      "kind": "chip",
+      "refersTo": "color-pad",
+      "description": "Fat player-color pad; selected state is a paper border plus drop.",
+      "html": "<div class=\"ds-pads\" role=\"listbox\" aria-label=\"Cor\"><button class=\"ds-pad\" type=\"button\" style=\"background:#d64545\" data-selected=\"true\" aria-selected=\"true\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#2f6fed\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#2f9e5f\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#d4a017\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#7b4fc7\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#e06b20\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#1f8a8a\"></button><button class=\"ds-pad\" type=\"button\" style=\"background:#d4539b\"></button></div>",
+      "css": ".ds-pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; } .ds-pad { width: 100%; height: 58px; border-radius: 16px; border: 3px solid transparent; cursor: pointer; transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.12s ease; } .ds-pad[data-selected=\"true\"] { border-color: var(--text, #f4f1ea); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); } .ds-pad:hover { filter: brightness(1.06); } .ds-pad:active { transform: scale(0.97); filter: brightness(0.92); } .ds-pad:focus-visible { outline: 3px solid var(--focus, #ffe14a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Nick Tile",
+      "kind": "custom",
+      "description": "Full-bleed player tile with nick, optional turn finger, and score marks.",
+      "html": "<div class=\"ds-nicks\"><div class=\"ds-nick\" style=\"background:#d64545;color:#fffaf0\" aria-current=\"true\"><span class=\"ds-nick-name\">Marco <span aria-hidden=\"true\">👈</span></span><span class=\"ds-nick-pts\">0 <svg width=\"13\" height=\"13\" viewBox=\"0 0 13 13\" aria-hidden=\"true\"><rect x=\"0.75\" y=\"0.75\" width=\"11.5\" height=\"11.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" /><circle cx=\"0.75\" cy=\"0.75\" r=\"1.75\" fill=\"currentColor\" /><circle cx=\"12.25\" cy=\"0.75\" r=\"1.75\" fill=\"currentColor\" /><circle cx=\"0.75\" cy=\"12.25\" r=\"1.75\" fill=\"currentColor\" /><circle cx=\"12.25\" cy=\"12.25\" r=\"1.75\" fill=\"currentColor\" /></svg></span></div><div class=\"ds-nick\" style=\"background:#2f6fed;color:#fffaf0\"><span class=\"ds-nick-name\">Bot Dani</span><span class=\"ds-nick-pts\">0 <svg width=\"13\" height=\"13\" viewBox=\"0 0 13 13\" aria-hidden=\"true\"><rect x=\"1.75\" y=\"5.75\" width=\"9.5\" height=\"1.5\" fill=\"currentColor\" /><circle cx=\"1.75\" cy=\"6.5\" r=\"1.75\" fill=\"currentColor\" /><circle cx=\"11.25\" cy=\"6.5\" r=\"1.75\" fill=\"currentColor\" /></svg></span></div></div>",
+      "css": ".ds-nicks { display: flex; flex-direction: column; gap: 8px; } .ds-nick { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: 16px; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28); font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 1.25rem; font-weight: 800; } .ds-nick[aria-current=\"true\"] { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), 0 0 0 3px var(--cta, #ffe14a); } .ds-nick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-nick-pts { font-variant-numeric: tabular-nums; font-size: 1.12rem; display: inline-flex; align-items: center; gap: 6px; } .ds-nick:hover { filter: brightness(1.04); }"
+    },
+    {
+      "name": "Wordmark",
+      "kind": "nav",
+      "refersTo": "site-title",
+      "description": "Anton uppercase title with the yellow score-stroke mark.",
+      "html": "<a class=\"ds-wordmark\" href=\"#\">Tracinhos <svg class=\"ds-mark\" width=\"28\" height=\"28\" viewBox=\"0 0 13 13\" aria-hidden=\"true\"><rect x=\"1.75\" y=\"5.75\" width=\"9.5\" height=\"1.5\" fill=\"currentColor\" /><circle cx=\"1.75\" cy=\"6.5\" r=\"1.75\" fill=\"currentColor\" /><circle cx=\"11.25\" cy=\"6.5\" r=\"1.75\" fill=\"currentColor\" /></svg></a>",
+      "css": ".ds-wordmark { display: flex; align-items: center; gap: 0.12em; min-height: 44px; color: var(--text, #f4f1ea); text-decoration: none; font-family: Anton, sans-serif; font-size: clamp(2.8rem, 9vw, 5.5rem); font-weight: 400; letter-spacing: 0.01em; line-height: 0.88; text-transform: uppercase; } .ds-mark { width: 0.85em; height: 0.85em; flex: 0 0 auto; color: var(--cta, #ffe14a); } .ds-wordmark:hover { filter: brightness(1.06); } .ds-wordmark:focus-visible { outline: 3px solid var(--focus, #ffe14a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Turn Shout",
+      "kind": "custom",
+      "refersTo": "turn-you",
+      "description": "SUA VEZ in Anton electric yellow beside the 96px timer.",
+      "html": "<div class=\"ds-turn\"><span class=\"ds-turn-dot\" style=\"background:#d64545\"></span><span class=\"ds-turn-copy\">Sua vez <small>Toque dois pontos vizinhos</small></span><div class=\"ds-timer\" aria-hidden=\"true\"><svg viewBox=\"0 0 96 96\"><circle class=\"ds-timer-track\" cx=\"48\" cy=\"48\" r=\"42\" /><circle class=\"ds-timer-arc\" cx=\"48\" cy=\"48\" r=\"42\" stroke-dasharray=\"263.89\" stroke-dashoffset=\"0\" transform=\"rotate(-90 48 48)\" /></svg><span class=\"ds-timer-num\">40<small>s</small></span></div></div>",
+      "css": ".ds-turn { display: flex; align-items: flex-start; gap: 10px; color: var(--cta, #ffe14a); font-family: Anton, sans-serif; font-size: clamp(2.6rem, 11vw, 3.6rem); font-weight: 400; letter-spacing: 0.01em; text-transform: uppercase; line-height: 0.9; } .ds-turn-dot { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 22px; margin-top: 0.28em; } .ds-turn-copy { flex: 1; min-width: 0; } .ds-turn-copy small { display: block; font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted, #b7c4ea); margin-top: 2px; } .ds-timer { position: relative; width: 96px; height: 96px; flex: 0 0 96px; } .ds-timer svg { display: block; width: 100%; height: 100%; } .ds-timer-track { fill: none; stroke: var(--line, #3a5290); stroke-width: 7; } .ds-timer-arc { fill: none; stroke: var(--cta, #ffe14a); stroke-width: 7; stroke-linecap: round; } .ds-timer-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: Anton, sans-serif; font-size: 2.35rem; letter-spacing: 0.02em; line-height: 1; color: var(--cta, #ffe14a); font-variant-numeric: tabular-nums; } .ds-timer-num small { font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 0.85rem; font-weight: 800; letter-spacing: 0; margin-left: 1px; margin-top: 0.45em; }"
+    },
+    {
+      "name": "Paper Board",
+      "kind": "custom",
+      "description": "Warm paper table: white dots, ink stroke, deep lift.",
+      "html": "<div class=\"ds-board\" aria-hidden=\"true\"><svg viewBox=\"0 0 168 168\"><line x1=\"28\" y1=\"28\" x2=\"140\" y2=\"28\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><line x1=\"28\" y1=\"84\" x2=\"140\" y2=\"84\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><line x1=\"28\" y1=\"140\" x2=\"140\" y2=\"140\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><line x1=\"28\" y1=\"28\" x2=\"28\" y2=\"140\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><line x1=\"84\" y1=\"28\" x2=\"84\" y2=\"140\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><line x1=\"140\" y1=\"28\" x2=\"140\" y2=\"140\" stroke=\"#e6d7c2\" stroke-width=\"2\" stroke-linecap=\"round\" /><circle cx=\"28\" cy=\"28\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"84\" cy=\"28\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"140\" cy=\"28\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"28\" cy=\"84\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"84\" cy=\"84\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"140\" cy=\"84\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"28\" cy=\"140\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"84\" cy=\"140\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /><circle cx=\"140\" cy=\"140\" r=\"7\" fill=\"#fff\" stroke=\"#141820\" stroke-width=\"1.75\" /></svg></div>",
+      "css": ".ds-board { display: flex; align-items: center; justify-content: center; } .ds-board svg { width: 220px; height: 220px; background: var(--paper, #f4efe4); border-radius: 20px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); }"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Electric yellow notice, ink type, 14px radius.",
+      "html": "<div class=\"ds-toast\" role=\"status\">Link copiado</div>",
+      "css": ".ds-toast { display: inline-block; max-width: 280px; background: var(--cta, #ffe14a); color: var(--cta-ink, #141820); padding: 12px 14px; border-radius: 14px; font-family: Sora, \"Segoe UI\", system-ui, sans-serif; font-size: 0.92rem; font-weight: 700; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4); } .ds-toast:hover { filter: brightness(0.96); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Night Living-Room Phones",
+    "overview": "Tracinhos is a category-standard party-game lobby executed at Kahoot craft: oversized actions, an unmissable turn, and a nick list that reads as people in the room. The field is a night living-room navy; the board is the paper table; electric yellow is the shout that starts a match and owns your turn. It refuses a timid dark-card stack and refuses school, notebook, or lined-paper costume.\n\nSora carries every UI sentence. Anton is reserved for the shout — wordmark, room code, SUA VEZ / Vez de X, timer numerals, and the result title. Controls sit directly on the navy field. The only lifted object in play is the paper board.",
+    "keyCharacteristics": [
+      "Navy field with a ceiling wash; no nested cards",
+      "Electric yellow on primary actions and SUA VEZ, never as a player pad",
+      "Anton shout + Sora UI",
+      "Eight player colors as fat pads and full-bleed nick tiles",
+      "Paper board as the table, with the deepest lift",
+      "Color is never the only identity or turn signal"
+    ],
+    "rules": [
+      { "name": "The Electric Shout Rule", "body": "Electric yellow starts the match and owns SUA VEZ. It never fills a player pad and never paints the navy field.", "section": "colors" },
+      { "name": "The Fat Pad Rule", "body": "Player color is a filled rounded pad or a full-bleed nick tile — never a thin swatch, outline chip, or text-only tint.", "section": "colors" },
+      { "name": "The Never-Color-Alone Rule", "body": "Identity and turn always carry nick, and turn also carries 👈 plus aria-current. Color is a partner, not the signal.", "section": "colors" },
+      { "name": "The Anton Shout Rule", "body": "Anton is wordmark, room code, section shout, SUA VEZ / Vez de X, timer numerals, and VENCEU / EMPATE. Every other sentence is Sora.", "section": "typography" },
+      { "name": "The No Nested Cards Rule", "body": "Controls sit on the navy field. No card wraps a card; no dark panel stacks the lobby.", "section": "elevation" },
+      { "name": "The Paper Lift Rule", "body": "The board is the only deeply lifted object. Nick tiles get a short drop. The navy field stays flat.", "section": "elevation" },
+      { "name": "The Fat Radius Rule", "body": "Actions 20px, pads 16px, fields 14px. Do not square them; do not pill the primary button.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do shout SUA VEZ in Anton + electric yellow, with a Sora hint underneath.",
+      "Do fill pads and nick tiles from the eight player hexes; pair every color with a nick.",
+      "Do keep the paper board as the only table on the navy field.",
+      "Do size the primary action at 72px (92px for desktop Criar) in electric yellow."
+    ],
+    "donts": [
+      "Don't wrap the lobby in nested dark cards or a timid card stack.",
+      "Don't dress any surface as school, notebook, or lined paper.",
+      "Don't set UI sentences in Anton, or the wordmark / code / SUA VEZ in Sora.",
+      "Don't use electric yellow as a player pad, or player yellow as the CTA.",
+      "Don't mark identity or turn with color alone.",
+      "Don't add kickers, eyebrows, or a results eyebrow."
+    ]
+  }
+}

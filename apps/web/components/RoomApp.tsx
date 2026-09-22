@@ -334,10 +334,12 @@ export function RoomApp({ code }: { code: string }) {
   if (room === null) {
     return (
       <main className="page">
-        <div className="card">
+        <section className="stage">
           <h2>Sala não encontrada</h2>
-          <a href="/">Voltar ao lobby</a>
-        </div>
+          <a className="btn" href="/">
+            Voltar ao lobby
+          </a>
+        </section>
         <Toast message={toast} />
       </main>
     );
@@ -346,9 +348,9 @@ export function RoomApp({ code }: { code: string }) {
   if (elsewhere) {
     return (
       <main className="page">
-        <div className="card">
+        <section className="stage">
           <h2>Você abriu o jogo noutra aba.</h2>
-        </div>
+        </section>
         <Toast message={toast} />
       </main>
     );
@@ -360,10 +362,11 @@ export function RoomApp({ code }: { code: string }) {
     return (
       <main className="page">
         <div className="brand">
-          <h1>Sala {room.code}</h1>
+          <p className="code">{room.code}</p>
           <p>Já na sala: {room.players.map((p) => p.nick).join(", ") || "ninguém ainda"}</p>
         </div>
-        <div className="card">
+        <section className="stage">
+          <h2>Entrar</h2>
           <div className="field">
             <label htmlFor="nick">Seu nick</label>
             <input id="nick" value={nick} maxLength={16} onChange={(e) => setNick(e.target.value)} />
@@ -375,7 +378,7 @@ export function RoomApp({ code }: { code: string }) {
           <button className="btn" disabled={room.takenColors.includes(color)} onClick={() => void sit()}>
             Entrar
           </button>
-        </div>
+        </section>
         <p>
           <a className="text-link" href="/regras">
             Regras do jogo
@@ -470,11 +473,10 @@ export function RoomApp({ code }: { code: string }) {
         </a>
       </div>
 
-      <div className="card">
+      <section className="stage">
         <ul className="list">
           {room.players.map((p) => (
-            <li key={p.id}>
-              <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+            <li key={p.id} style={nickTile(p.color)}>
               {p.nick}
               {p.id === room.hostPlayerId ? " · host" : ""}
               {p.kind === "bot" ? " · bot" : ""}
@@ -534,9 +536,9 @@ export function RoomApp({ code }: { code: string }) {
             </button>
           </>
         ) : (
-          <p>Esperando o host…</p>
+          <p className="waiting">Esperando o host…</p>
         )}
-      </div>
+      </section>
       <Toast message={toast} />
       {wsFlag}
     </main>
@@ -552,8 +554,7 @@ function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }
         const squares = room.game?.scores[p.id] ?? 0;
         const lines = strokes[p.id] ?? 0;
         return (
-          <div key={p.id} className="score-row" aria-current={isTurn ? "true" : undefined}>
-            <span className="dot" style={{ background: COLOR_HEX[p.color] }} />
+          <div key={p.id} className="score-row" style={nickTile(p.color)} aria-current={isTurn ? "true" : undefined}>
             <span className="score-nick">
               <span className="score-nick-text">{p.nick}</span>
               {isTurn ? (
@@ -588,13 +589,11 @@ function Results({ room }: { room: PublicRoom }) {
   const draw = winnerNames.length > 1;
 
   return (
-    <div className="card results">
-      <h2>Fim de jogo</h2>
-      <p className="results-title">{draw ? "Empate" : "Venceu"}</p>
+    <div className="results">
+      <h2 className="results-title">{draw ? "Empate" : "Venceu"}</h2>
       <ul className="results-winners">
         {winnerNames.map((p) => (
-          <li key={p.id}>
-            <span className="dot dot-lg" style={{ background: COLOR_HEX[p.color] }} />
+          <li key={p.id} style={nickTile(p.color)}>
             {p.nick}
           </li>
         ))}
@@ -605,6 +604,13 @@ function Results({ room }: { room: PublicRoom }) {
       </a>
     </div>
   );
+}
+
+function nickTile(color: ColorId): { background: string; color: string } {
+  return {
+    background: COLOR_HEX[color],
+    color: color === "yellow" ? "#141820" : "#fffaf0",
+  };
 }
 
 function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs: number }) {
@@ -618,29 +624,27 @@ function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs:
   const leftMs = Math.max(0, deadlineAt - now);
   const leftSec = Math.ceil(leftMs / 1000);
   const frac = Math.max(0, Math.min(1, leftMs / durationMs));
-  const r = 15;
+  const r = 42;
   const c = 2 * Math.PI * r;
 
   return (
     <div className="timer">
-      <svg viewBox="0 0 40 40" aria-hidden="true">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="#3d3228" strokeWidth="3" />
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <circle className="timer-track" cx="48" cy="48" r={r} />
         <circle
-          cx="20"
-          cy="20"
+          className="timer-arc"
+          cx="48"
+          cy="48"
           r={r}
-          fill="none"
-          stroke="var(--accent-2)"
-          strokeWidth="3"
-          strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - frac)}
-          transform="rotate(-90 20 20)"
+          transform="rotate(-90 48 48)"
         />
-        <text className="timer-num" x="20" y="20.5" textAnchor="middle" dominantBaseline="middle">
-          {leftSec}s
-        </text>
       </svg>
+      <span className="timer-num">
+        {leftSec}
+        <small>s</small>
+      </span>
       <span className="sr-only" aria-live="polite">
         {leftSec}s
       </span>

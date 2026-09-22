@@ -4,8 +4,8 @@ export const alt = "Tracinhos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const paper = "#f4e8d4";
-const bg = "#1a1410";
+const paper = "#ffe14a";
+const bg = "#14264f";
 
 function Dot() {
   return (
@@ -107,7 +107,7 @@ export default function OpenGraphImage() {
           alignItems: "center",
           justifyContent: "center",
           gap: 48,
-          background: `radial-gradient(1200px 600px at 20% -10%, #2a2018, ${bg})`,
+          background: bg,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 56 }}>

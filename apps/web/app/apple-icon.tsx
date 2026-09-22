@@ -13,7 +13,7 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1a1410",
+          background: "#14264f",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", width: 118, height: 118 }}>
@@ -22,7 +22,7 @@ export default function AppleIcon() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              background: "#f4e8d4",
+              background: "#ffe14a",
               flexShrink: 0,
             }}
           />
@@ -30,7 +30,7 @@ export default function AppleIcon() {
             style={{
               height: 14,
               flex: 1,
-              background: "#f4e8d4",
+              background: "#ffe14a",
               margin: "0 -6px",
             }}
           />
@@ -39,7 +39,7 @@ export default function AppleIcon() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              background: "#f4e8d4",
+              background: "#ffe14a",
               flexShrink: 0,
             }}
           />

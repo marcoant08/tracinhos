@@ -12,16 +12,14 @@ export default function RegrasPage() {
         <p>Como se joga Tracinhos.</p>
       </header>
 
-      <section className="card rules">
+      <section className="rules">
         <h2>Objetivo</h2>
         <p>
           Ligue os pontos da grade. Quem fecha um quadrado ganha 1 ponto e pinta o
           quadrado com a sua cor. No fim, vence quem tem mais quadrados. Empate
           vale para todos com a maior pontuação.
         </p>
-      </section>
 
-      <section className="card rules">
         <h2>Como traçar</h2>
         <ol>
           <li>Na sua vez, toque um ponto. Ele pisca.</li>
@@ -32,18 +30,14 @@ export default function RegrasPage() {
           <li>Toque o segundo ponto. Só então o traço entra.</li>
         </ol>
         <p>Toque de novo a origem para cancelar. Traço já feito não serve de destino.</p>
-      </section>
 
-      <section className="card rules">
         <h2>Turnos</h2>
         <p>
           Sem fechar quadrado, a vez passa ao próximo. Quem fecha um (ou dois) quadrados
           pontua e <strong>é obrigado a traçar de novo</strong> — joga outra vez até um
           traço que não feche.
         </p>
-      </section>
 
-      <section className="card rules">
         <h2>Tempo</h2>
         <p>
           Cada humano tem 40 segundos para completar os dois toques. Se o tempo
@@ -58,9 +52,7 @@ export default function RegrasPage() {
           para o próximo — e, se não tiver jeito, escolhem o traço que abre
           menos quadrados.
         </p>
-      </section>
 
-      <section className="card rules">
         <h2>Sala</h2>
         <p>
           Até 5 participantes (humanos e bots). O host começa a partida. Recarregar

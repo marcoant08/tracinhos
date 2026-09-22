@@ -83,15 +83,10 @@ export default function HomePage() {
   }
 
   return (
-    <main className="page">
-      <header className="brand">
-        <p>Ligue os pontos. Feche o quadrado. Jogue de novo.</p>
-        <a className="text-link" href="/regras">
-          Regras do jogo
-        </a>
-      </header>
+    <main className="page page-lobby">
+      <p className="lede">Ligue os pontos. Feche o quadrado. Jogue de novo.</p>
 
-      <section className="card">
+      <section className="stage">
         <h2>Criar sala</h2>
         <div className="field">
           <label htmlFor="size">Tamanho da grade</label>
@@ -133,12 +128,13 @@ export default function HomePage() {
         </button>
       </section>
 
-      <section className="card">
+      <section className="join-beat">
         <h2>Entrar</h2>
         <div className="field">
           <label htmlFor="code">Código da sala</label>
           <input
             id="code"
+            className="join-code"
             value={joinCode}
             maxLength={4}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -149,6 +145,9 @@ export default function HomePage() {
           Ir para a sala
         </button>
       </section>
+      <a className="text-link" href="/regras">
+        Regras do jogo
+      </a>
       <Toast message={toast} />
     </main>
   );
