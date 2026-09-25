@@ -16,6 +16,22 @@ export function ScoreSquare({ className, size = 13 }: { className?: string; size
   );
 }
 
+export function PickerStroke({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="43"
+      height="14"
+      viewBox="0 0 43 14"
+      aria-hidden="true"
+    >
+      <rect x="5" y="5.5" width="33" height="3" fill="currentColor" />
+      <circle cx="5" cy="7" r="3.4" fill="currentColor" />
+      <circle cx="38" cy="7" r="3.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ScoreStroke({ className, size = 13 }: { className?: string; size?: number }) {
   return (
     <svg

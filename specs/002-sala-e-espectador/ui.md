@@ -6,7 +6,7 @@ Mesma base visual da [001/ui.md](../001-jogo-tracinhos/ui.md). Abaixo, só o que
 
 - **?:** botão circular, min 44×44, no header (home, sala, resultado). Abre sheet de baixo ou modal central com o texto de `/regras` + fechar. Fundo escurece; foco preso no sheet.
 - **Desafio (topo):** barra fixa abaixo da safe-area, largura da coluna (`min(440px, 100%)`). Não é o toast da direita. Uma de cada vez. Empurra o conteúdo da home para baixo (não cobre o primeiro campo).
-- **Caneta:** ícone único (SVG tinteiro em linha, com rabisco de tinta), `currentColor` = hex do jogador em todo o desenho. No picker, fundo do botão some; a caneta é o alvo. Na vez, a caneta substitui a bolinha do bloco “Sua vez” / “Vez de”.
+- **Caneta:** ícone único (lápis Phosphor em preenchimento), `currentColor` = hex do jogador. No picker, ao selecionar a cor a caneta sai do centro, vai ao início do tracinho (~280 ms) e o desenha da esquerda para a direita (~560 ms). A cor anterior devolve a caneta ao centro (~280 ms) e some o traço. Sem movimento se `prefers-reduced-motion`. Na vez, a caneta substitui a bolinha do bloco “Sua vez” / “Vez de”.
 
 ## `/` Home
 

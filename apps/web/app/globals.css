@@ -334,7 +334,61 @@ input::placeholder {
   opacity: 0.35;
 }
 
-.color svg {
+.color-mark {
+  position: relative;
+  width: 80px;
+  height: 40px;
+}
+
+.color-stroke {
+  position: absolute;
+  left: 7px;
+  bottom: 4px;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+}
+
+.color[data-selected="true"] .color-stroke {
+  opacity: 1;
+  clip-path: inset(0 0 0 0);
+}
+
+.color[data-drawing="true"] .color-stroke {
+  animation: color-stroke-draw 560ms cubic-bezier(0.16, 1, 0.3, 1) 280ms both;
+}
+
+.color[data-returning="true"] .color-stroke {
+  animation: color-stroke-leave 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.color-pen {
+  position: absolute;
+  left: 27px;
+  top: 6px;
+  display: flex;
+  transform-origin: 18.75% 81.25%;
+  transform: rotate(-8deg);
+}
+
+.color[data-selected="true"] .color-pen {
+  left: 44px;
+  top: 6px;
+  transform: rotate(-12deg);
+}
+
+.color[data-drawing="true"] .color-pen {
+  animation:
+    color-pen-approach 280ms cubic-bezier(0.16, 1, 0.3, 1) both,
+    color-pen-draw 560ms cubic-bezier(0.16, 1, 0.3, 1) 280ms forwards;
+}
+
+.color[data-returning="true"] .color-pen {
+  animation: color-pen-return 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.color-pen svg,
+.color-stroke svg {
+  display: block;
   overflow: visible;
 }
 
@@ -342,8 +396,56 @@ input::placeholder {
   content: "";
   position: absolute;
   inset: 22%;
+  z-index: 1;
   border-top: 3px solid var(--bg);
   transform: rotate(45deg);
+}
+
+@keyframes color-stroke-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes color-pen-approach {
+  from {
+    transform: translateX(-17px) rotate(-8deg);
+  }
+  to {
+    transform: translateX(-43px) rotate(-14deg);
+  }
+}
+
+@keyframes color-pen-draw {
+  from {
+    transform: translateX(-43px) rotate(-14deg);
+  }
+  to {
+    transform: translateX(0) rotate(-12deg);
+  }
+}
+
+@keyframes color-pen-return {
+  from {
+    transform: translateX(17px) rotate(-12deg);
+  }
+  to {
+    transform: translateX(0) rotate(-8deg);
+  }
+}
+
+@keyframes color-stroke-leave {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 0;
+    clip-path: inset(0 0 0 0);
+  }
 }
 
 .page-play {
@@ -1367,6 +1469,10 @@ input::placeholder {
   .board-turn-border,
   .btn,
   .color,
+  .color[data-drawing="true"] .color-stroke,
+  .color[data-drawing="true"] .color-pen,
+  .color[data-returning="true"] .color-stroke,
+  .color[data-returning="true"] .color-pen,
   .edge-grow {
     animation: none;
     transition: none;
