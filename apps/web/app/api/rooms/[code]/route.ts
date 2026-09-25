@@ -8,5 +8,7 @@ export async function GET(
   context: { params: Promise<{ code: string }> },
 ) {
   const { code } = await context.params;
-  return handle(() => getPublicRoom(code, request.headers.get("x-seat-token")));
+  return handle(() =>
+    getPublicRoom(code, request.headers.get("x-seat-token"), request.headers.get("x-watch-token")),
+  );
 }

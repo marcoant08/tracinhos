@@ -1,3 +1,4 @@
+import { HelpButton } from "./HelpButton";
 import { ScoreStroke } from "./Marks";
 
 export function SiteHeader() {
@@ -7,6 +8,7 @@ export function SiteHeader() {
         Tracinhos
         <ScoreStroke className="brand-mark" />
       </a>
+      <HelpButton />
     </header>
   );
 }

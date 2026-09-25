@@ -1,6 +1,7 @@
 "use client";
 
-import { COLOR_HEX, COLOR_IDS, type ColorId } from "@tracinhos/shared";
+import { COLOR_HEX, COLOR_IDS, COLOR_LABELS, type ColorId } from "@tracinhos/shared";
+import { PenIcon } from "./Pen";
 
 export function ColorPicker({
   value,
@@ -21,14 +22,16 @@ export function ColorPicker({
             type="button"
             className="color"
             role="option"
-            aria-label={id}
+            aria-label={COLOR_LABELS[id]}
             aria-selected={value === id}
             aria-disabled={busy}
             data-selected={value === id}
             disabled={busy}
-            style={{ background: COLOR_HEX[id] }}
+            style={{ color: COLOR_HEX[id] }}
             onClick={() => onChange(id)}
-          />
+          >
+            <PenIcon size={32} />
+          </button>
         );
       })}
     </div>

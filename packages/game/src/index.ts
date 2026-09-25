@@ -1,7 +1,7 @@
 export const MIN_SIZE = 2;
 export const MAX_SIZE = 14;
 export const DEFAULT_SIZE = 5;
-export const MAX_PLAYERS = 5;
+export const MAX_PLAYERS = 3;
 /** 10 pontos de largura × 15 pontos de altura. */
 export const TALL_GRID = { cols: 9, rows: 14 } as const;
 

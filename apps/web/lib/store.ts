@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 
 type MessageHandler = (channel: string, message: string) => void;
@@ -126,4 +127,35 @@ export function getStore(): Store {
   globalStore.__tracinhosStore =
     url && token ? new UpstashStore(url, token) : new MemoryStore();
   return globalStore.__tracinhosStore;
+}
+
+export async function loadJson<T>(key: string): Promise<T | null> {
+  const raw = await getStore().get(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveJson(key: string, value: unknown, ttlSeconds: number) {
+  await getStore().set(key, JSON.stringify(value), ttlSeconds);
+}
+
+export async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const store = getStore();
+  const token = randomUUID();
+  let locked = false;
+  for (let i = 0; i < 25; i++) {
+    locked = await store.setNxPx(key, token, 4000);
+    if (locked) break;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  if (!locked) throw new Error("lock_timeout");
+  try {
+    return await fn();
+  } finally {
+    await store.del(key);
+  }
 }

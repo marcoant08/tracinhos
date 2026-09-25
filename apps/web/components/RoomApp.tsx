@@ -13,17 +13,33 @@ import {
   type ColorId,
   type PublicRoom,
   type Session,
+  type WatchSession,
 } from "@tracinhos/shared";
 import { Board } from "./Board";
 import { ColorPicker } from "./ColorPicker";
+import { HelpButton } from "./HelpButton";
 import { ScoreSquare, ScoreStroke } from "./Marks";
+import { PenIcon } from "./Pen";
 import { Toast } from "./Toast";
-import { clearSession, loadIdentity, loadSession, saveIdentity, saveSession } from "@/lib/session";
+import {
+  clearOccupy,
+  clearSession,
+  clearWatch,
+  loadIdentity,
+  loadSession,
+  loadWatch,
+  saveIdentity,
+  saveOccupy,
+  saveSession,
+  saveWatch,
+} from "@/lib/session";
 
 export function RoomApp({ code }: { code: string }) {
   const roomCode = code.toUpperCase();
   const [room, setRoom] = useState<PublicRoom | null | undefined>(undefined);
   const [session, setSession] = useState<Session | null>(null);
+  const [watch, setWatch] = useState<WatchSession | null>(null);
+  const [watchersOpen, setWatchersOpen] = useState(false);
   const [nick, setNick] = useState("");
   const [color, setColor] = useState<ColorId>("blue");
   const [toast, setToast] = useState<string | null>(null);
@@ -51,10 +67,14 @@ export function RoomApp({ code }: { code: string }) {
 
   async function refreshRoom() {
     try {
-      const token = loadSession(roomCode)?.seatToken;
+      const seatToken = loadSession(roomCode)?.seatToken;
+      const watchToken = loadWatch(roomCode)?.watchToken;
+      const headers: Record<string, string> = {};
+      if (seatToken) headers["x-seat-token"] = seatToken;
+      else if (watchToken) headers["x-watch-token"] = watchToken;
       const res = await fetch(`/api/rooms/${roomCode}`, {
         cache: "no-store",
-        headers: token ? { "x-seat-token": token } : {},
+        headers,
       });
       if (res.status === 404) {
         setRoom(null);
@@ -106,11 +126,36 @@ export function RoomApp({ code }: { code: string }) {
   }
 
   useEffect(() => {
-    setSession(loadSession(roomCode));
+    const seat = loadSession(roomCode);
+    const existingWatch = loadWatch(roomCode);
+    setSession(seat);
+    setWatch(existingWatch);
     const pref = loadIdentity();
     if (pref) {
       setNick(pref.nick);
       setColor(pref.color);
+    }
+    if (existingWatch && !seat) {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/rooms/${roomCode}/watch/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ watchToken: existingWatch.watchToken }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            clearWatch(roomCode);
+            setWatch(null);
+            return;
+          }
+          saveWatch(data.watch);
+          setWatch(data.watch);
+          setRoom((prev) => preferRoom(prev, data.room));
+        } catch {
+          /* rede */
+        }
+      })();
     }
     void refreshRoom();
   }, [roomCode]);
@@ -254,6 +299,19 @@ export function RoomApp({ code }: { code: string }) {
   }, [room?.status]);
 
   useEffect(() => {
+    if (!room) return;
+    if ((session || watch) && (room.status === "lobby" || room.status === "playing")) {
+      saveOccupy(room.code, session ? "seated" : "watching");
+      return;
+    }
+    if (room.status === "finished") clearOccupy();
+    if (watch && room.status === "lobby") {
+      clearWatch(room.code);
+      setWatch(null);
+    }
+  }, [room?.status, room?.code, session?.seatToken, watch?.watchToken]);
+
+  useEffect(() => {
     if (room?.status !== "playing" && !holdingBoard) return;
     const id = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(id);
@@ -313,10 +371,36 @@ export function RoomApp({ code }: { code: string }) {
     setRoom(data.room);
   }
 
+  async function startWatch() {
+    const res = await fetch(`/api/rooms/${roomCode}/watch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nick, color }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setToast(data.message ?? ERROR_MESSAGES[data.error as keyof typeof ERROR_MESSAGES]);
+      return;
+    }
+    saveWatch(data.watch);
+    saveIdentity({ nick: data.watch.nick, color: data.watch.color });
+    setWatch(data.watch);
+    setRoom(data.room);
+  }
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(`${location.origin}/sala/${roomCode}`);
       setToast("Link copiado");
+    } catch {
+      setToast("Não deu para copiar.");
+    }
+  }
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      setToast("Código copiado");
     } catch {
       setToast("Não deu para copiar.");
     }
@@ -358,57 +442,72 @@ export function RoomApp({ code }: { code: string }) {
 
   const wsFlag = <WsFlag show={wsDown} />;
 
-  if (!session) {
+  const watchers = room.watchers ?? [];
+  const activeWatch = watch && room.status !== "lobby" ? watch : null;
+  const isSpectator = Boolean(activeWatch && !session);
+
+  if (!session && !activeWatch) {
+    if (room.status === "finished") {
+      return (
+        <main className="page">
+          <Results room={room} canCreate={false} />
+          <Toast message={toast} />
+        </main>
+      );
+    }
+    const watching = room.status === "playing";
+    const takenColors = watching ? watchers.map((w) => w.color) : room.takenColors;
     return (
       <main className="page">
-        <div className="brand">
-          <p className="code">{room.code}</p>
-          <p>Já na sala: {room.players.map((p) => p.nick).join(", ") || "ninguém ainda"}</p>
-        </div>
+        <RoomCodeBlock code={room.code} count={room.players.length} onCopyCode={() => void copyCode()} />
+        <p className="lede">
+          Já na sala: {room.players.map((p) => p.nick).join(", ") || "ninguém ainda"}
+        </p>
         <section className="stage">
-          <h2>Entrar</h2>
+          <h2>{watching ? "Assistir" : "Entrar"}</h2>
           <div className="field">
             <label htmlFor="nick">Seu nick</label>
             <input id="nick" value={nick} maxLength={16} onChange={(e) => setNick(e.target.value)} />
           </div>
           <div className="field">
             <label>Sua cor</label>
-            <ColorPicker value={color} taken={room.takenColors} onChange={setColor} />
+            <ColorPicker value={color} taken={takenColors} onChange={setColor} />
           </div>
-          <button className="btn" disabled={room.takenColors.includes(color)} onClick={() => void sit()}>
-            Entrar
+          <button
+            className="btn"
+            disabled={takenColors.includes(color)}
+            onClick={() => void (watching ? startWatch() : sit())}
+          >
+            {watching ? "Assistir" : "Entrar"}
           </button>
         </section>
-        <p>
-          <a className="text-link" href="/regras">
-            Regras do jogo
-          </a>
-        </p>
         <Toast message={toast} />
       </main>
     );
   }
 
-  const isHost = session.playerId === room.hostPlayerId;
+  const isHost = Boolean(session && session.playerId === room.hostPlayerId);
   const starterPlayer =
     room.starterPlayerId ? room.players.find((p) => p.id === room.starterPlayerId) : undefined;
   const starterValue = starterPlayer?.id ?? "";
-  const viewRoom = withPendingMoves(room, session.playerId, pendingEdges);
+  const viewRoom = session ? withPendingMoves(room, session.playerId, pendingEdges) : room;
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
-  const serverMyTurn = room.status === "playing" && currentId === session.playerId;
-  const localMyTurn =
-    viewRoom.game?.status === "playing" &&
-    viewRoom.game.playerIds[viewRoom.game.currentPlayerIndex] === session.playerId;
-  const myTurn = serverMyTurn || localMyTurn;
-  const canDraw = localMyTurn || (serverMyTurn && pendingEdges.length === 0);
+  const serverMyTurn = Boolean(session && room.status === "playing" && currentId === session.playerId);
+  const localMyTurn = Boolean(
+    session &&
+      viewRoom.game?.status === "playing" &&
+      viewRoom.game.playerIds[viewRoom.game.currentPlayerIndex] === session.playerId,
+  );
+  const myTurn = !isSpectator && (serverMyTurn || localMyTurn);
+  const canDraw = !isSpectator && (localMyTurn || (serverMyTurn && pendingEdges.length === 0));
   const showBoard = room.status === "playing" || (room.status === "finished" && holdingBoard);
   const timerMs = current?.kind === "bot" ? BOT_THINK_MS : TURN_TIMEOUT_MS;
 
   if (room.status === "finished" && !holdingBoard) {
     return (
       <main className="page">
-        <Results room={room} />
+        <Results room={room} canCreate={!isSpectator} />
         <Toast message={toast} />
         {wsFlag}
       </main>
@@ -416,16 +515,21 @@ export function RoomApp({ code }: { code: string }) {
   }
 
   if (showBoard) {
+    const turnColor = current ? COLOR_HEX[current.color] : "#888";
     return (
       <main className="page page-play">
         <div className="hud">
           <div className="hud-top">
-            <div className={`turn ${myTurn ? "you" : ""}`}>
-              <span
-                className="dot"
-                style={{ background: current ? COLOR_HEX[current.color] : "#888" }}
-              />
-              {myTurn ? (
+            <div className={`turn ${myTurn ? "you" : ""} ${isSpectator ? "watching" : ""}`}>
+              <span className="turn-pen" style={{ color: turnColor }}>
+                <PenIcon size={28} />
+              </span>
+              {isSpectator ? (
+                <span>
+                  Assistindo
+                  <small className="hint">Vez de {current?.nick ?? "…"}</small>
+                </span>
+              ) : myTurn ? (
                 <span>
                   Sua vez
                   <small className="hint">Toque dois pontos vizinhos</small>
@@ -436,6 +540,17 @@ export function RoomApp({ code }: { code: string }) {
                   {current?.kind === "bot" ? <small className="hint">pensando…</small> : null}
                 </span>
               )}
+            </div>
+            <div className="hud-tools">
+              {!isSpectator ? (
+                <WatchersEye
+                  watchers={watchers}
+                  open={watchersOpen}
+                  onToggle={() => setWatchersOpen((v) => !v)}
+                  onClose={() => setWatchersOpen(false)}
+                />
+              ) : null}
+              <HelpButton />
             </div>
             <div className="timer-slot">
               {room.turnDeadlineAt ? (
@@ -448,8 +563,8 @@ export function RoomApp({ code }: { code: string }) {
         <Board
           room={viewRoom}
           canDraw={canDraw}
-          borderColor={borderColor}
-          flash={flash}
+          borderColor={isSpectator ? null : borderColor}
+          flash={isSpectator ? null : flash}
           onDraw={(edge) => {
             setPendingEdges((prev) => [...prev, edge]);
             void submitDraw(edge);
@@ -463,15 +578,10 @@ export function RoomApp({ code }: { code: string }) {
 
   return (
     <main className="page">
-      <div className="brand">
-        <p className="code">{room.code}</p>
-        <button className="btn ghost" onClick={() => void copyLink()}>
-          Copiar link
-        </button>
-        <a className="text-link" href="/regras">
-          Regras
-        </a>
-      </div>
+      <RoomCodeBlock code={room.code} count={room.players.length} onCopyCode={() => void copyCode()} />
+      <button className="btn ghost" onClick={() => void copyLink()}>
+        Copiar link
+      </button>
 
       <section className="stage">
         <ul className="list">
@@ -580,7 +690,7 @@ function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }
   );
 }
 
-function Results({ room }: { room: PublicRoom }) {
+function Results({ room, canCreate = true }: { room: PublicRoom; canCreate?: boolean }) {
   const winnerIds = new Set(room.game?.winnerIds ?? []);
   const ranked = [...room.players].sort(
     (a, b) => (room.game?.scores[b.id] ?? 0) - (room.game?.scores[a.id] ?? 0),
@@ -600,7 +710,7 @@ function Results({ room }: { room: PublicRoom }) {
       </ul>
       <ScoreList room={{ ...room, players: ranked }} />
       <a className="btn" href="/">
-        Nova sala
+        {canCreate ? "Nova sala" : "Voltar ao lobby"}
       </a>
     </div>
   );
@@ -673,9 +783,10 @@ function useGlowFlash(signal: string | null) {
 }
 
 function preferRoom(prev: PublicRoom | null | undefined, next: PublicRoom): PublicRoom {
-  if (prev && prev.status !== "lobby" && next.status === "lobby") return prev;
-  if (prev && next.updatedAt < prev.updatedAt) return prev;
-  return next;
+  const normalized = { ...next, watchers: next.watchers ?? [] };
+  if (prev && prev.status !== "lobby" && normalized.status === "lobby") return prev;
+  if (prev && normalized.updatedAt < prev.updatedAt) return prev;
+  return normalized;
 }
 
 function edgeTaken(game: GameState, edge: Edge) {
@@ -715,6 +826,87 @@ function boardGlow({
   if (left <= 5_000) return "red";
   if (left <= 10_000) return "orange";
   return "turn";
+}
+
+function RoomCodeBlock({
+  code,
+  count,
+  onCopyCode,
+}: {
+  code: string;
+  count: number;
+  onCopyCode: () => void;
+}) {
+  return (
+    <div className="room-code-block">
+      <button type="button" className="room-code" onClick={onCopyCode} aria-label={`Código ${code}, copiar`}>
+        {code}
+      </button>
+      <p className="occupancy" aria-label={`${count} de ${MAX_PLAYERS} jogadores`}>
+        {count}/{MAX_PLAYERS}
+      </p>
+    </div>
+  );
+}
+
+function WatchersEye({
+  watchers,
+  open,
+  onToggle,
+  onClose,
+}: {
+  watchers: { id: string; nick: string; color: ColorId }[];
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}) {
+  const n = watchers.length;
+  return (
+    <div className="watchers-wrap">
+      <button
+        type="button"
+        className="icon-btn watchers-btn"
+        aria-label={`${n} assistindo`}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <EyeIcon />
+        <span>{n}</span>
+      </button>
+      {open ? (
+        <>
+          <button className="watchers-scrim" aria-label="Fechar" onClick={onClose} />
+          <div className="watchers-balloon" role="dialog" aria-label="Quem assiste">
+            {n === 0 ? (
+              <p>Ninguém assistindo.</p>
+            ) : (
+              <ul>
+                {watchers.map((w) => (
+                  <li key={w.id}>
+                    <span className="turn-pen" style={{ color: COLOR_HEX[w.color] }}>
+                      <PenIcon size={18} />
+                    </span>
+                    {w.nick}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 5c5.2 0 9.3 3.4 10.7 7-1.4 3.6-5.5 7-10.7 7S2.7 15.6 1.3 12C2.7 8.4 6.8 5 12 5Zm0 3.2A3.8 3.8 0 1 0 12 16a3.8 3.8 0 0 0 0-7.8Zm0 2.2a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z"
+      />
+    </svg>
+  );
 }
 
 function WsFlag({ show }: { show: boolean }) {

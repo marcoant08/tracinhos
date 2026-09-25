@@ -27,6 +27,12 @@ function statusOf(code: ApiErrorCode): number {
     case "room_full":
     case "game_already_started":
     case "not_enough_players":
+    case "challenge_busy":
+    case "challenge_pending":
+    case "challenge_gone":
+    case "challenge_self":
+    case "watchers_full":
+    case "not_playing":
       return 409;
     default:
       return 400;

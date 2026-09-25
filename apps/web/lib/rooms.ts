@@ -14,23 +14,28 @@ import {
   BOT_THINK_MS,
   COLOR_IDS,
   DISCONNECT_TO_BOT_MS,
+  LIVE_LIST_MAX,
+  MAX_WATCHERS,
   ROOM_CODE_ALPHABET,
   ROOM_TTL_SECONDS,
   TURN_TIMEOUT_MS,
+  WATCHER_TTL_MS,
   isColorId,
   isValidNick,
   nickKey,
   normalizeNick,
   pickBotNick,
   type ColorId,
+  type LiveRoom,
   type PlayerKind,
   type PublicRoom,
   type RoomStatus,
   type ServerMessage,
   type Session,
+  type WatchSession,
 } from "@tracinhos/shared";
 import { RoomError } from "./errors";
-import { getStore } from "./store";
+import { getStore, loadJson, saveJson, withLock } from "./store";
 
 export type Seat = {
   id: string;
@@ -42,6 +47,14 @@ export type Seat = {
   wsEpoch: number;
 };
 
+export type Watcher = {
+  id: string;
+  nick: string;
+  color: ColorId;
+  watchToken: string;
+  seenAt: number;
+};
+
 export type Room = {
   code: string;
   cols: number;
@@ -49,6 +62,7 @@ export type Room = {
   status: RoomStatus;
   hostPlayerId: string;
   players: Seat[];
+  watchers: Watcher[];
   game: GameState | null;
   turnDeadlineAt: number | null;
   starterPlayerId: string | null;
@@ -70,7 +84,12 @@ export function toPublic(room: Room): PublicRoom {
       kind: p.kind,
       connected: p.connected,
     })),
-    takenNicks: room.players.map((p) => nickKey(p.nick)),
+    watchers: room.watchers.map((w) => ({
+      id: w.id,
+      nick: w.nick,
+      color: w.color,
+    })),
+    takenNicks: allNicks(room).map(nickKey),
     takenColors: room.players.map((p) => p.color),
     game: room.game,
     turnDeadlineAt: room.status === "playing" ? (room.turnDeadlineAt ?? null) : null,
@@ -79,7 +98,25 @@ export function toPublic(room: Room): PublicRoom {
   };
 }
 
-export async function getPublicRoom(code: string, seatToken?: string | null): Promise<PublicRoom> {
+export function toLiveRoom(room: Room | PublicRoom): LiveRoom {
+  return {
+    code: room.code,
+    cols: room.cols,
+    rows: room.rows,
+    players: room.players.map((p) => ({
+      nick: p.nick,
+      color: p.color,
+      squares: room.game?.scores[p.id] ?? 0,
+    })),
+    updatedAt: room.updatedAt,
+  };
+}
+
+export async function getPublicRoom(
+  code: string,
+  seatToken?: string | null,
+  watchToken?: string | null,
+): Promise<PublicRoom> {
   let actorId: string | undefined;
   if (seatToken) {
     try {
@@ -89,13 +126,25 @@ export async function getPublicRoom(code: string, seatToken?: string | null): Pr
     }
   }
   const peek = sweep(await mustRoom(code));
+  const watchersRemoved = sweepWatchers(peek);
+  const watcher = watchToken ? watcherFromToken(peek, watchToken) : null;
   const needsTouch = Boolean(actorId && seatNeedsTouch(peek, actorId));
-  if (!needsTouch && !isTurnOverdue(peek)) return toPublic(peek);
+  if (!needsTouch && !isTurnOverdue(peek) && !watchersRemoved) {
+    if (watcher) {
+      watcher.seenAt = Date.now();
+      await saveRoom(peek);
+    }
+    return toPublic(peek);
+  }
 
   const result = await mutate(code, async (room) => {
     const reclaimed = actorId ? touchSeat(room, actorId) : false;
     if (reclaimed && currentSeat(room)?.id === actorId) {
       refreshTurnDeadline(room);
+    }
+    if (watchToken) {
+      const live = watcherFromToken(room, watchToken);
+      if (live) live.seenAt = Date.now();
     }
     const timedOut = advanceOverdueTurn(room);
     return { timedOut };
@@ -142,6 +191,7 @@ export async function createRoom(input: {
         wsEpoch: 1,
       },
     ],
+    watchers: [],
     game: null,
     turnDeadlineAt: null,
     starterPlayerId: null,
@@ -222,6 +272,155 @@ export async function resumeRoom(
   };
 }
 
+export async function watchRoom(
+  code: string,
+  input: { nick: string; color: string },
+): Promise<{ room: PublicRoom; watch: WatchSession }> {
+  const watcherId = randomUUID();
+  const watchToken = newToken();
+  const result = await mutate(code, async (room) => {
+    if (room.status !== "playing") throw new RoomError("not_playing");
+    if (room.watchers.length >= MAX_WATCHERS) throw new RoomError("watchers_full");
+    const nick = parseNick(input.nick);
+    const color = parseColor(input.color);
+    assertNickFree(room, nick);
+    assertWatcherColorFree(room, color);
+    room.watchers.push({
+      id: watcherId,
+      nick,
+      color,
+      watchToken,
+      seenAt: Date.now(),
+    });
+    await saveWatchToken(watchToken, room.code, watcherId);
+    return { nick, color };
+  });
+  return {
+    room: result.room,
+    watch: {
+      watcherId,
+      watchToken,
+      nick: result.nick,
+      color: result.color,
+      roomCode: result.room.code,
+    },
+  };
+}
+
+export async function resumeWatch(
+  code: string,
+  watchToken: string,
+): Promise<{ room: PublicRoom; watch: WatchSession }> {
+  const rec = await loadWatchToken(watchToken);
+  if (!rec || rec.roomCode !== normalizeCode(code)) {
+    throw new RoomError("invalid_token");
+  }
+  const result = await mutate(code, async (room) => {
+    if (room.status !== "playing") throw new RoomError("not_playing");
+    const watcher = room.watchers.find((w) => w.id === rec.watcherId && w.watchToken === watchToken);
+    if (!watcher) throw new RoomError("invalid_token");
+    watcher.seenAt = Date.now();
+    return { nick: watcher.nick, color: watcher.color, watcherId: watcher.id };
+  });
+  return {
+    room: result.room,
+    watch: {
+      watcherId: result.watcherId,
+      watchToken,
+      nick: result.nick,
+      color: result.color,
+      roomCode: result.room.code,
+    },
+  };
+}
+
+export async function createSeatedRoom(input: {
+  cols: number;
+  rows: number;
+  host: { nick: string; color: ColorId };
+  guest: { nick: string; color: ColorId };
+}): Promise<{ room: PublicRoom; hostSession: Session; guestSession: Session }> {
+  let grid: { cols: number; rows: number };
+  try {
+    grid = parseGrid(input.cols, input.rows);
+  } catch {
+    throw new RoomError("invalid_size");
+  }
+  const hostNick = parseNick(input.host.nick);
+  const guestNick = parseNick(input.guest.nick);
+  if (nickKey(hostNick) === nickKey(guestNick)) throw new RoomError("nick_taken");
+  const hostColor = parseColor(input.host.color);
+  let guestColor = parseColor(input.guest.color);
+  if (guestColor === hostColor) {
+    const free = COLOR_IDS.find((id) => id !== hostColor);
+    if (!free) throw new RoomError("color_taken");
+    guestColor = free;
+  }
+  const code = await uniqueCode();
+  const hostId = randomUUID();
+  const guestId = randomUUID();
+  const hostToken = newToken();
+  const guestToken = newToken();
+  const now = Date.now();
+  const room: Room = {
+    code,
+    cols: grid.cols,
+    rows: grid.rows,
+    status: "lobby",
+    hostPlayerId: hostId,
+    players: [
+      {
+        id: hostId,
+        nick: hostNick,
+        color: hostColor,
+        kind: "human",
+        connected: true,
+        disconnectedAt: null,
+        wsEpoch: 1,
+      },
+      {
+        id: guestId,
+        nick: guestNick,
+        color: guestColor,
+        kind: "human",
+        connected: true,
+        disconnectedAt: null,
+        wsEpoch: 1,
+      },
+    ],
+    watchers: [],
+    game: null,
+    turnDeadlineAt: null,
+    starterPlayerId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await saveRoom(room);
+  await saveSeat(hostToken, code, hostId);
+  await saveSeat(guestToken, code, guestId);
+  return {
+    room: toPublic(room),
+    hostSession: sessionOf(hostToken, room, hostId),
+    guestSession: sessionOf(guestToken, room, guestId),
+  };
+}
+
+export async function listLiveRooms(): Promise<LiveRoom[]> {
+  const codes = (await loadJson<string[]>(LIVE_INDEX_KEY)) ?? [];
+  const rooms: LiveRoom[] = [];
+  for (const code of codes) {
+    try {
+      const room = sweep(await mustRoom(code));
+      if (room.status !== "playing") continue;
+      rooms.push(toLiveRoom(room));
+    } catch {
+      /* sala sumida */
+    }
+  }
+  rooms.sort((a, b) => b.updatedAt - a.updatedAt);
+  return rooms.slice(0, LIVE_LIST_MAX);
+}
+
 export async function addBot(code: string, actorId: string): Promise<PublicRoom> {
   const result = await mutate(code, async (room) => {
     if (room.status !== "lobby") throw new RoomError("game_already_started");
@@ -229,7 +428,7 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
     if (room.players.length >= MAX_PLAYERS) throw new RoomError("room_full");
     const color = COLOR_IDS.find((id) => !room.players.some((p) => p.color === id));
     if (!color) throw new RoomError("color_taken");
-    const nick = pickBotNick(room.players.map((p) => p.nick));
+    const nick = pickBotNick(allNicks(room));
     room.players.push({
       id: randomUUID(),
       nick,
@@ -412,6 +611,7 @@ async function mutate<T extends Record<string, unknown>>(
     if (dirty) {
       room.updatedAt = Date.now();
       await saveRoom(room);
+      await syncLiveIndex(room);
     }
     publicRoom = toPublic(room);
   } finally {
@@ -451,6 +651,7 @@ function hydrateRoom(room: Room & { size?: number }): Room {
   return {
     ...withGrid,
     starterPlayerId: withGrid.starterPlayerId ?? null,
+    watchers: Array.isArray(withGrid.watchers) ? withGrid.watchers : [],
     players: withGrid.players.map((p) => ({
       ...p,
       wsEpoch: typeof p.wsEpoch === "number" ? p.wsEpoch : 0,
@@ -517,11 +718,45 @@ function parseColor(color: string): ColorId {
 }
 
 function assertIdentityFree(room: Room, nick: string, color: ColorId, exceptId?: string) {
+  assertNickFree(room, nick, exceptId);
+  for (const player of room.players) {
+    if (player.id === exceptId) continue;
+    if (player.color === color) throw new RoomError("color_taken");
+  }
+}
+
+function assertNickFree(room: Room, nick: string, exceptId?: string) {
   for (const player of room.players) {
     if (player.id === exceptId) continue;
     if (nickKey(player.nick) === nickKey(nick)) throw new RoomError("nick_taken");
-    if (player.color === color) throw new RoomError("color_taken");
   }
+  for (const watcher of room.watchers) {
+    if (watcher.id === exceptId) continue;
+    if (nickKey(watcher.nick) === nickKey(nick)) throw new RoomError("nick_taken");
+  }
+}
+
+function assertWatcherColorFree(room: Room, color: ColorId, exceptId?: string) {
+  for (const watcher of room.watchers) {
+    if (watcher.id === exceptId) continue;
+    if (watcher.color === color) throw new RoomError("color_taken");
+  }
+}
+
+function allNicks(room: Room): string[] {
+  return [...room.players.map((p) => p.nick), ...room.watchers.map((w) => w.nick)];
+}
+
+function watcherFromToken(room: Room, watchToken: string): Watcher | null {
+  return room.watchers.find((w) => w.watchToken === watchToken) ?? null;
+}
+
+function sweepWatchers(room: Room): boolean {
+  const now = Date.now();
+  const next = room.watchers.filter((w) => now - w.seenAt < WATCHER_TTL_MS);
+  if (next.length === room.watchers.length) return false;
+  room.watchers = next;
+  return true;
 }
 
 function sweep(room: Room): Room {
@@ -536,7 +771,40 @@ function sweep(room: Room): Room {
       player.kind = "bot";
     }
   }
+  sweepWatchers(room);
   return room;
+}
+
+const LIVE_INDEX_KEY = "live:rooms";
+
+async function syncLiveIndex(room: Room) {
+  try {
+    await withLock("lock:live", async () => {
+      const codes = (await loadJson<string[]>(LIVE_INDEX_KEY)) ?? [];
+      const playing = room.status === "playing";
+      const has = codes.includes(room.code);
+      let next = codes;
+      if (playing && !has) next = [room.code, ...codes];
+      if (!playing && has) next = codes.filter((code) => code !== room.code);
+      if (next !== codes) await saveJson(LIVE_INDEX_KEY, next, ROOM_TTL_SECONDS);
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function saveWatchToken(token: string, roomCode: string, watcherId: string) {
+  await getStore().set(
+    `watch:${token}`,
+    JSON.stringify({ roomCode, watcherId }),
+    ROOM_TTL_SECONDS,
+  );
+}
+
+async function loadWatchToken(token: string): Promise<{ roomCode: string; watcherId: string } | null> {
+  const raw = await getStore().get(`watch:${token}`);
+  if (!raw) return null;
+  return JSON.parse(raw) as { roomCode: string; watcherId: string };
 }
 
 function seatNeedsTouch(room: Room, playerId: string): boolean {

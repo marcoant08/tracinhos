@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import type { GameState } from "@tracinhos/game";
-import { BOARD_GLOW_MS, COLOR_HEX, type ColorId, type PublicRoom } from "@tracinhos/shared";
+import { BOARD_GLOW_MS, COLOR_HEX, STROKE_GROW_MS, type ColorId, type PublicRoom } from "@tracinhos/shared";
 
 const CELL = 56;
 const PAD = 28;
@@ -32,6 +32,13 @@ export function Board({
   );
   const moved = useRef(false);
   const origin = useRef<{ x: number; y: number } | null>(null);
+  const localFrom = useRef<Point | null>(null);
+  const growFrom = useRef<Map<string, Point | null>>(new Map());
+  const seenEdges = useRef<Set<string> | null>(null);
+  const seenSquares = useRef<Set<string> | null>(null);
+  const revealTimers = useRef<number[]>([]);
+  const [growing, setGrowing] = useState<Set<string>>(() => new Set());
+  const [hiddenSquares, setHiddenSquares] = useState<Set<string>>(() => new Set());
 
   const game = room.game;
 
@@ -61,6 +68,65 @@ export function Board({
     ro.observe(svg);
     return () => ro.disconnect();
   }, [borderColor, room.game?.cols, room.game?.rows]);
+
+  useLayoutEffect(() => {
+    const next = room.game;
+    if (!next) return;
+    const edgeKeys = drawnEdgeKeys(next);
+    const squareKeys = ownedSquareKeys(next);
+    if (seenEdges.current === null) {
+      seenEdges.current = edgeKeys;
+      seenSquares.current = squareKeys;
+      return;
+    }
+    const newEdges = [...edgeKeys].filter((key) => !seenEdges.current!.has(key));
+    const newSquares = [...squareKeys].filter((key) => !seenSquares.current!.has(key));
+    seenEdges.current = edgeKeys;
+    seenSquares.current = squareKeys;
+    if (newEdges.length === 0 && newSquares.length === 0) return;
+
+    const reduce =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || newEdges.length === 0) return;
+
+    const origin = localFrom.current;
+    localFrom.current = null;
+    for (const key of newEdges) growFrom.current.set(key, origin);
+
+    setGrowing((prev) => {
+      const nextSet = new Set(prev);
+      for (const key of newEdges) nextSet.add(key);
+      return nextSet;
+    });
+    if (newSquares.length) {
+      setHiddenSquares((prev) => {
+        const nextSet = new Set(prev);
+        for (const key of newSquares) nextSet.add(key);
+        return nextSet;
+      });
+    }
+    const timer = window.setTimeout(() => {
+      revealTimers.current = revealTimers.current.filter((id) => id !== timer);
+      setGrowing((prev) => {
+        const nextSet = new Set(prev);
+        for (const key of newEdges) nextSet.delete(key);
+        return nextSet;
+      });
+      setHiddenSquares((prev) => {
+        const nextSet = new Set(prev);
+        for (const key of newSquares) nextSet.delete(key);
+        return nextSet;
+      });
+    }, STROKE_GROW_MS);
+    revealTimers.current.push(timer);
+  }, [room.game]);
+
+  useEffect(() => {
+    return () => {
+      for (const id of revealTimers.current) window.clearTimeout(id);
+      revealTimers.current = [];
+    };
+  }, []);
 
   if (!game) return null;
   const board: GameState = game;
@@ -131,6 +197,7 @@ export function Board({
     if (selected) {
       const edge = edgeBetween(selected, point);
       if (edge && !isDrawn(board, edge)) {
+        localFrom.current = selected;
         onDraw(edge);
         setSelected(null);
         return;
@@ -178,7 +245,7 @@ export function Board({
         ) : null}
         {board.owners.map((row, r) =>
           row.map((owner, c) => {
-            if (!owner) return null;
+            if (!owner || hiddenSquares.has(`q-${r}-${c}`)) return null;
             const color = COLOR_HEX[(colors.get(owner) ?? "red") as ColorId];
             return (
               <rect
@@ -203,6 +270,8 @@ export function Board({
               y1: PAD + r * CELL,
               x2: PAD + (c + 1) * CELL,
               y2: PAD + r * CELL,
+              from: growFrom.current.get(`h-${r}-${c}`) ?? null,
+              growing: growing.has(`h-${r}-${c}`),
               label: `traço horizontal linha ${r + 1} coluna ${c + 1}`,
             }),
           ),
@@ -217,6 +286,8 @@ export function Board({
               y1: PAD + r * CELL,
               x2: PAD + c * CELL,
               y2: PAD + (r + 1) * CELL,
+              from: growFrom.current.get(`v-${r}-${c}`) ?? null,
+              growing: growing.has(`v-${r}-${c}`),
               label: `traço vertical linha ${r + 1} coluna ${c + 1}`,
             }),
           ),
@@ -274,6 +345,8 @@ function edgeMarks({
   y1,
   x2,
   y2,
+  from,
+  growing,
   label,
 }: {
   key: string;
@@ -283,34 +356,83 @@ function edgeMarks({
   y1: number;
   x2: number;
   y2: number;
+  from: Point | null;
+  growing: boolean;
   label: string;
 }) {
   const drawn = owner !== null;
   const colorId = owner ? colors.get(owner) : undefined;
+  const directed = growing ? growCoords(x1, y1, x2, y2, from) : { x1, y1, x2, y2 };
+  const length = Math.hypot(directed.x2 - directed.x1, directed.y2 - directed.y1);
+  const growStyle = growing
+    ? ({
+        ["--dash" as string]: length,
+        ["--grow-ms" as string]: `${STROKE_GROW_MS}ms`,
+        } as CSSProperties)
+    : undefined;
   return (
     <g key={key} aria-label={label}>
       <line
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
+        className={growing ? "edge-grow" : undefined}
+        x1={directed.x1}
+        y1={directed.y1}
+        x2={directed.x2}
+        y2={directed.y2}
         stroke={drawn ? "#2b2118" : "#e6d7c2"}
-        strokeWidth={drawn ? 6 : 2}
+        strokeWidth={drawn ? 8 : 2}
         strokeLinecap="round"
+        style={growStyle}
       />
       {drawn && colorId ? (
         <line
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
+          className={growing ? "edge-grow" : undefined}
+          x1={directed.x1}
+          y1={directed.y1}
+          x2={directed.x2}
+          y2={directed.y2}
           stroke={COLOR_HEX[colorId]}
-          strokeWidth={2.5}
+          strokeWidth={5}
           strokeLinecap="round"
+          style={growStyle}
         />
       ) : null}
     </g>
   );
+}
+
+function growCoords(x1: number, y1: number, x2: number, y2: number, from: Point | null) {
+  if (!from) return { x1, y1, x2, y2 };
+  const fx = PAD + from.col * CELL;
+  const fy = PAD + from.row * CELL;
+  if (Math.hypot(fx - x2, fy - y2) < Math.hypot(fx - x1, fy - y1)) {
+    return { x1: x2, y1: y2, x2: x1, y2: y1 };
+  }
+  return { x1, y1, x2, y2 };
+}
+
+function drawnEdgeKeys(game: GameState) {
+  const keys = new Set<string>();
+  game.horizontal.forEach((row, r) =>
+    row.forEach((owner, c) => {
+      if (owner) keys.add(`h-${r}-${c}`);
+    }),
+  );
+  game.vertical.forEach((row, r) =>
+    row.forEach((owner, c) => {
+      if (owner) keys.add(`v-${r}-${c}`);
+    }),
+  );
+  return keys;
+}
+
+function ownedSquareKeys(game: GameState) {
+  const keys = new Set<string>();
+  game.owners.forEach((row, r) =>
+    row.forEach((owner, c) => {
+      if (owner) keys.add(`q-${r}-${c}`);
+    }),
+  );
+  return keys;
 }
 
 function edgeBetween(a: Point, b: Point): Edge | null {

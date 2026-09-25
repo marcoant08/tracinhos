@@ -36,6 +36,26 @@ export const BOT_THINK_MS = 1_000;
 export const RESULT_HOLD_MS = 3_000;
 export const BOARD_GLOW_MS = 1_000;
 export const LOBBY_POLL_MS = 1_000;
+export const PRESENCE_POLL_MS = 3_000;
+export const PRESENCE_TTL_MS = 15_000;
+export const CHALLENGE_TTL_MS = 30_000;
+export const STROKE_GROW_MS = 280;
+export const LIVE_LIST_MAX = 40;
+export const MAX_WATCHERS = 30;
+export const WATCHER_TTL_MS = 15_000;
+export const WATCH_PREFIX = "tracinhos:watch:";
+export const PRESENCE_KEY = "tracinhos:presence";
+
+export const COLOR_LABELS: Record<ColorId, string> = {
+  red: "vermelho",
+  blue: "azul",
+  green: "verde",
+  yellow: "amarelo",
+  purple: "roxo",
+  orange: "laranja",
+  teal: "verde-água",
+  pink: "rosa",
+};
 
 export const BOT_NICKS = [
   "Jompes",
@@ -78,6 +98,12 @@ export type PublicPlayer = {
   connected: boolean;
 };
 
+export type PublicWatcher = {
+  id: string;
+  nick: string;
+  color: ColorId;
+};
+
 export type PublicRoom = {
   code: string;
   cols: number;
@@ -85,6 +111,7 @@ export type PublicRoom = {
   status: RoomStatus;
   hostPlayerId: string;
   players: PublicPlayer[];
+  watchers: PublicWatcher[];
   takenNicks: string[];
   takenColors: ColorId[];
   game: GameState | null;
@@ -101,6 +128,57 @@ export type Session = {
   roomCode: string;
 };
 
+export type WatchSession = {
+  watcherId: string;
+  watchToken: string;
+  nick: string;
+  color: ColorId;
+  roomCode: string;
+};
+
+export type PresenceRecord = {
+  presenceId: string;
+  presenceToken: string;
+};
+
+export type PresenceStatus = "idle" | "seated" | "watching";
+
+export type PublicPresence = {
+  presenceId: string;
+  nick: string;
+  color: ColorId;
+};
+
+export type LiveRoom = {
+  code: string;
+  cols: number;
+  rows: number;
+  players: { nick: string; color: ColorId; squares: number }[];
+  updatedAt: number;
+};
+
+export type ChallengePreview = {
+  id: string;
+  from: PublicPresence;
+  cols: number;
+  rows: number;
+  expiresAt: number;
+};
+
+export type OutgoingChallenge = {
+  id: string;
+  to: PublicPresence;
+  expiresAt: number;
+};
+
+export type LobbySnapshot = {
+  online: PublicPresence[];
+  live: LiveRoom[];
+  inbox: ChallengePreview | null;
+  outgoing: OutgoingChallenge | null;
+  accepted: { roomCode: string; session: Session } | null;
+};
+
 export type ApiErrorCode =
   | "room_not_found"
   | "invalid_nick"
@@ -115,7 +193,13 @@ export type ApiErrorCode =
   | "not_your_turn"
   | "illegal_move"
   | "invalid_token"
-  | "not_in_room";
+  | "not_in_room"
+  | "challenge_busy"
+  | "challenge_pending"
+  | "challenge_gone"
+  | "challenge_self"
+  | "watchers_full"
+  | "not_playing";
 
 export type ClientMessage =
   | { type: "room:join"; roomCode: string; nick: string; color: ColorId }
@@ -140,7 +224,7 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   invalid_size: "Tamanho da grade inválido (2 a 14 quadrados em cada lado).",
   nick_taken: "Esse nick já foi escolhido.",
   color_taken: "Essa cor já foi escolhida.",
-  room_full: "A sala já tem 5 jogadores.",
+  room_full: "A sala já tem 3 jogadores.",
   game_already_started: "A partida já começou.",
   not_host: "Só o host pode fazer isso.",
   not_enough_players: "Precisa de pelo menos 2 participantes.",
@@ -148,7 +232,17 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   illegal_move: "Esse traço não vale.",
   invalid_token: "Sessão inválida. Entre de novo.",
   not_in_room: "Você não está nesta sala.",
+  challenge_busy: "Essa pessoa está ocupada.",
+  challenge_pending: "Já existe um desafio pendente.",
+  challenge_gone: "Esse desafio não vale mais.",
+  challenge_self: "Você não pode desafiar a si mesmo.",
+  watchers_full: "Essa sala já tem muitos espectadores.",
+  not_playing: "Essa partida ainda não começou.",
 };
+
+export function watchStorageKey(roomCode: string): string {
+  return `${WATCH_PREFIX}${roomCode.toUpperCase()}`;
+}
 
 export function normalizeNick(nick: string): string {
   return nick.trim();

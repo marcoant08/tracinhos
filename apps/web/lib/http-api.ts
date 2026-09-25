@@ -1,6 +1,23 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { actorFromToken, createRoom, drawEdge, getPublicRoom, joinRoom, parseDrawEdge, resumeRoom } from "./rooms";
-import { jsonError } from "./errors";
+import {
+  acceptChallenge,
+  createChallenge,
+  declineChallenge,
+  getLobby,
+  pingPresence,
+} from "./presence";
+import {
+  actorFromToken,
+  createRoom,
+  drawEdge,
+  getPublicRoom,
+  joinRoom,
+  parseDrawEdge,
+  resumeRoom,
+  resumeWatch,
+  watchRoom,
+} from "./rooms";
+import { jsonError, RoomError } from "./errors";
 
 export async function handleRest(
   req: IncomingMessage,
@@ -22,11 +39,59 @@ export async function handleRest(
       return send(res, 201, result);
     }
 
+    if (req.method === "GET" && pathname === "/api/lobby") {
+      return send(res, 200, await getLobby(header(req, "x-presence-token")));
+    }
+
+    if (req.method === "POST" && pathname === "/api/presence") {
+      const body = await readJson(req);
+      const occupying = asOccupying(body.occupying);
+      return send(
+        res,
+        200,
+        await pingPresence({
+          presenceToken: asString(body.presenceToken),
+          nick: asString(body.nick),
+          color: asString(body.color),
+          cols: asNumber(body.cols),
+          rows: asNumber(body.rows),
+          occupying,
+        }),
+      );
+    }
+
+    if (req.method === "POST" && pathname === "/api/challenges") {
+      const token = header(req, "x-presence-token");
+      if (!token) throw new RoomError("invalid_token");
+      const body = await readJson(req);
+      return send(res, 201, await createChallenge(token, asString(body.toPresenceId)));
+    }
+
+    const acceptMatch = pathname.match(/^\/api\/challenges\/([^/]+)\/accept$/);
+    if (req.method === "POST" && acceptMatch) {
+      const token = header(req, "x-presence-token");
+      if (!token) throw new RoomError("invalid_token");
+      return send(res, 200, await acceptChallenge(token, decodeURIComponent(acceptMatch[1])));
+    }
+
+    const declineMatch = pathname.match(/^\/api\/challenges\/([^/]+)\/decline$/);
+    if (req.method === "POST" && declineMatch) {
+      const token = header(req, "x-presence-token");
+      if (!token) throw new RoomError("invalid_token");
+      return send(res, 200, await declineChallenge(token, decodeURIComponent(declineMatch[1])));
+    }
+
     const roomMatch = pathname.match(/^\/api\/rooms\/([^/]+)$/);
     if (req.method === "GET" && roomMatch) {
-      const header = req.headers["x-seat-token"];
-      const seatToken = Array.isArray(header) ? header[0] : header;
-      return send(res, 200, await getPublicRoom(decodeURIComponent(roomMatch[1]), seatToken));
+      return send(
+        res,
+        200,
+        await getPublicRoom(
+          decodeURIComponent(roomMatch[1]),
+          header(req, "x-seat-token"),
+          header(req, "x-watch-token"),
+        ),
+      );
     }
 
     const joinMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/join$/);
@@ -46,6 +111,25 @@ export async function handleRest(
       return send(res, 200, result);
     }
 
+    const watchResumeMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/watch\/resume$/);
+    if (req.method === "POST" && watchResumeMatch) {
+      const body = await readJson(req);
+      return send(res, 200, await resumeWatch(decodeURIComponent(watchResumeMatch[1]), asString(body.watchToken)));
+    }
+
+    const watchMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/watch$/);
+    if (req.method === "POST" && watchMatch) {
+      const body = await readJson(req);
+      return send(
+        res,
+        200,
+        await watchRoom(decodeURIComponent(watchMatch[1]), {
+          nick: asString(body.nick),
+          color: asString(body.color),
+        }),
+      );
+    }
+
     const drawMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/draw$/);
     if (req.method === "POST" && drawMatch) {
       const body = await readJson(req);
@@ -61,6 +145,19 @@ export async function handleRest(
     const { body, status } = jsonError(error);
     return send(res, status, body);
   }
+}
+
+function header(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function asOccupying(value: unknown): { roomCode: string; role: "seated" | "watching" } | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { roomCode?: unknown; role?: unknown };
+  if (typeof row.roomCode !== "string") return null;
+  if (row.role !== "seated" && row.role !== "watching") return null;
+  return { roomCode: row.roomCode, role: row.role };
 }
 
 function asString(value: unknown): string {
