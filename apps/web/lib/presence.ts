@@ -107,7 +107,6 @@ export async function getLobby(presenceToken?: string | null): Promise<LobbySnap
   let me: Presence | null = null;
   if (presenceToken) {
     me = await loadPresenceByToken(presenceToken);
-    if (!me) throw new RoomError("invalid_token");
   }
 
   const accepted = me?.accepted ?? null;

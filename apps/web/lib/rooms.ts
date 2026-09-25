@@ -134,6 +134,7 @@ export async function getPublicRoom(
       watcher.seenAt = Date.now();
       await saveRoom(peek);
     }
+    await ensureLiveIndex(peek);
     return toPublic(peek);
   }
 
@@ -406,16 +407,21 @@ export async function createSeatedRoom(input: {
 }
 
 export async function listLiveRooms(): Promise<LiveRoom[]> {
-  const codes = (await loadJson<string[]>(LIVE_INDEX_KEY)) ?? [];
+  const codes = await loadLiveCodes();
   const rooms: LiveRoom[] = [];
+  const keep: string[] = [];
   for (const code of codes) {
     try {
       const room = sweep(await mustRoom(code));
       if (room.status !== "playing") continue;
+      keep.push(code);
       rooms.push(toLiveRoom(room));
     } catch {
       /* sala sumida */
     }
+  }
+  if (keep.length !== codes.length) {
+    await saveJson(LIVE_INDEX_KEY, keep, ROOM_TTL_SECONDS);
   }
   rooms.sort((a, b) => b.updatedAt - a.updatedAt);
   return rooms.slice(0, LIVE_LIST_MAX);
@@ -777,10 +783,24 @@ function sweep(room: Room): Room {
 
 const LIVE_INDEX_KEY = "live:rooms";
 
+async function loadLiveCodes(): Promise<string[]> {
+  const raw = await loadJson<unknown>(LIVE_INDEX_KEY);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((code): code is string => typeof code === "string" && code.length > 0);
+}
+
+async function ensureLiveIndex(room: Room) {
+  if (room.status !== "playing" && room.status !== "finished") return;
+  const codes = await loadLiveCodes();
+  const has = codes.includes(room.code);
+  if ((room.status === "playing") === has) return;
+  await syncLiveIndex(room);
+}
+
 async function syncLiveIndex(room: Room) {
   try {
     await withLock("lock:live", async () => {
-      const codes = (await loadJson<string[]>(LIVE_INDEX_KEY)) ?? [];
+      const codes = await loadLiveCodes();
       const playing = room.status === "playing";
       const has = codes.includes(room.code);
       let next = codes;

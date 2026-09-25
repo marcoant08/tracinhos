@@ -8,6 +8,7 @@ import {
   COLOR_IDS,
   ERROR_MESSAGES,
   PRESENCE_POLL_MS,
+  isValidNick,
   type ColorId,
   type LobbySnapshot,
 } from "@tracinhos/shared";
@@ -66,11 +67,17 @@ export default function HomePage() {
   colsRef.current = cols;
   rowsRef.current = rows;
 
+  const publishRef = useRef<(overrides?: { nick?: string; color?: ColorId }) => Promise<void>>(
+    async () => {},
+  );
+
   useEffect(() => {
     const pref = loadIdentity();
     if (pref) {
       setNick(pref.nick);
       setColor(pref.color);
+      nickRef.current = pref.nick;
+      colorRef.current = pref.color;
     }
     const grid = loadGridPref();
     if (!grid) return;
@@ -87,23 +94,18 @@ export default function HomePage() {
   useEffect(() => {
     let stopped = false;
 
-    async function tick() {
+    async function publish(overrides?: { nick?: string; color?: ColorId }) {
       if (document.visibilityState === "hidden") return;
       try {
         const pingData = await heartbeatPresence({
-          nick: nickRef.current,
-          color: colorRef.current,
+          nick: overrides?.nick ?? nickRef.current,
+          color: overrides?.color ?? colorRef.current,
           cols: colsRef.current,
           rows: rowsRef.current,
-        });
-        if (!pingData) return;
+        }).catch(() => null);
 
-        const res = await fetch("/api/lobby", {
-          cache: "no-store",
-          headers: { "x-presence-token": pingData.presence.presenceToken },
-        });
-        if (!res.ok || stopped) return;
-        const next = (await res.json()) as LobbySnapshot;
+        const next = await fetchLobby(pingData?.presenceToken);
+        if (!next || stopped) return;
         if (next.accepted) {
           saveSession(next.accepted.session);
           router.push(`/sala/${next.accepted.roomCode}`);
@@ -115,15 +117,45 @@ export default function HomePage() {
       }
     }
 
-    void tick();
-    const id = setInterval(tick, PRESENCE_POLL_MS);
-    document.addEventListener("visibilitychange", tick);
+    publishRef.current = publish;
+    void publish();
+    const id = setInterval(() => void publish(), PRESENCE_POLL_MS);
+    const onVis = () => void publish();
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       stopped = true;
       clearInterval(id);
-      document.removeEventListener("visibilitychange", tick);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, [router]);
+
+  function commitNick(value: string) {
+    const chosen = value.trim();
+    nickRef.current = chosen;
+    if (chosen !== nick) setNick(chosen);
+    if (isValidNick(chosen)) {
+      saveIdentity({
+        nick: chosen,
+        color: colorRef.current,
+        cols: colsRef.current,
+        rows: rowsRef.current,
+      });
+    }
+    void publishRef.current({ nick: chosen });
+  }
+
+  function commitColor(next: ColorId) {
+    setColor(next);
+    colorRef.current = next;
+    if (!isValidNick(nickRef.current)) return;
+    saveIdentity({
+      nick: nickRef.current,
+      color: next,
+      cols: colsRef.current,
+      rows: rowsRef.current,
+    });
+    void publishRef.current({ color: next });
+  }
 
   async function create() {
     setBusy(true);
@@ -334,11 +366,12 @@ export default function HomePage() {
             maxLength={16}
             autoComplete="nickname"
             onChange={(e) => setNick(e.target.value)}
+            onBlur={() => commitNick(nick)}
           />
         </div>
         <div className="field">
           <label>Sua cor</label>
-          <ColorPicker value={color} taken={[]} onChange={setColor} />
+          <ColorPicker value={color} taken={[]} onChange={commitColor} />
         </div>
         <button className="btn" disabled={busy} onClick={() => void create()}>
           Criar sala
@@ -365,6 +398,17 @@ export default function HomePage() {
       <Toast message={toast} />
     </main>
   );
+}
+
+async function fetchLobby(presenceToken?: string): Promise<LobbySnapshot | null> {
+  const headers: Record<string, string> = {};
+  if (presenceToken) headers["x-presence-token"] = presenceToken;
+  let res = await fetch("/api/lobby", { cache: "no-store", headers });
+  if (!res.ok && presenceToken) {
+    res = await fetch("/api/lobby", { cache: "no-store" });
+  }
+  if (!res.ok) return null;
+  return (await res.json()) as LobbySnapshot;
 }
 
 async function heartbeatPresence(input: {
