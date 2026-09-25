@@ -11,7 +11,7 @@ Agrega home. Header opcional `x-presence-token`. O cliente busca a cada `PRESENC
 ```json
 {
   "online": [
-    { "presenceId": "e1", "nick": "Bia", "color": "blue" }
+    { "presenceId": "e1", "nick": "Bia", "color": "blue", "status": "idle" }
   ],
   "live": [
     {
@@ -37,7 +37,7 @@ Agrega home. Header opcional `x-presence-token`. O cliente busca a cada `PRESENC
 }
 ```
 
-- `online`: só `idle` de **outros** aparelhos (nunca o dono do token). Sem token: lista igual, `inbox`/`outgoing`/`accepted` nulos.
+- `online`: `idle` e `seated` de **outros** aparelhos (nunca o dono do token). `watching` fica de fora. Sem token: lista igual, `inbox`/`outgoing`/`accepted` nulos.
 - `live`: até `LIVE_LIST_MAX` salas `playing`.
 - `inbox`: desafio `pending` **para** este token, ou `null`.
 - `outgoing`: desafio `pending` **deste** token, ou `null`.
@@ -54,6 +54,14 @@ Heartbeat da home.
 Token vazio: o servidor cria `presenceId`+token. Nick inválido: presença **não** entra em `online` (ainda devolve token para o aparelho).
 
 **200** `{ "presence": { "presenceId": "e1", "presenceToken": "opaque" } }`
+
+## `POST /api/presence/leave`
+
+**Body** `{ "presenceToken": "opaque" }`
+
+Some na hora da lista Online e recusa desafio (`challenge_gone`). Token inexistente: ainda **200**.
+
+**200** `{ "ok": true }`
 
 ## `POST /api/challenges`
 

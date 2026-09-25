@@ -6,7 +6,7 @@ Mesma base visual da [001/ui.md](../001-jogo-tracinhos/ui.md). Abaixo, só o que
 
 - **?:** botão circular, min 44×44, no header (home, sala, resultado). Abre sheet de baixo ou modal central com o texto de `/regras` + fechar. Fundo escurece; foco preso no sheet.
 - **Desafio (topo):** barra fixa abaixo da safe-area, largura da coluna (`min(440px, 100%)`). Não é o toast da direita. Uma de cada vez. Empurra o conteúdo da home para baixo (não cobre o primeiro campo).
-- **Caneta:** ícone único (SVG), `currentColor` = hex do jogador. No picker, fundo do botão some; a caneta é o alvo. Na vez, a caneta substitui a bolinha do bloco “Sua vez” / “Vez de”.
+- **Caneta:** ícone único (SVG tinteiro em linha, com rabisco de tinta), `currentColor` = hex do jogador em todo o desenho. No picker, fundo do botão some; a caneta é o alvo. Na vez, a caneta substitui a bolinha do bloco “Sua vez” / “Vez de”.
 
 ## `/` Home
 
@@ -14,12 +14,12 @@ Coluna única, ordem:
 
 1. Header: título + **?**.
 2. **Faixa de desafio** (se houver inbox pendente).
-3. **Online:** lista. Vazio: “Ninguém online agora.” Cada livre: caneta + nick + botão “Desafiar”. Sem o próprio aparelho.
-4. **Ao vivo:** lista de partidas `playing`. Vazio: “Nenhuma partida agora.” Linha: canetas/nicks, placar `a–b` (ou `a–b–c`), grade, `n/3`. Toque na linha inteira.
+3. **Online:** lista. Vazio: “Ninguém online agora.” Cada livre: caneta + nick + botão “Desafiar”. Em partida: mesmo nick + botão “Jogando” desabilitado, cinza. Sem o próprio aparelho.
+4. **Ao vivo:** lista de partidas `playing`. Vazio: “Nenhuma partida agora.” Linha: canetas/nicks, placar `a–b` (ou `a–b–c`), grade, `n/3`. Se for a sua (tem `seatToken`): anel amarelo + “Sua partida”, no topo da lista. Toque na linha inteira.
 5. **Criar** e **Entrar** (como hoje; picker = canetas).
 6. Sem link-texto “Regras”.
 
-Online e ao vivo atualizam a cada `PRESENCE_POLL_MS` (3 s) com a aba visível. Desafio na faixa chega no mesmo GET.
+Online e ao vivo atualizam a cada `PRESENCE_POLL_MS` (3 s) com a aba visível. Desafio na faixa chega no mesmo GET. Desafiar alguém que já saiu: toast “Essa pessoa não está mais online.” — nunca “Desafio enviado.”
 
 ## `/sala/:codigo`
 
@@ -65,4 +65,4 @@ Lista com `n/3`. Host: bot / starter / Começar. **?** no header. Sem link “Re
 
 ## Acessibilidade
 
-Picker: `aria-label` da cor (nome, não só o hex). Desafiar: `aria-label` “Desafiar {nick}”. Olho: `aria-label` “{n} assistindo”. Sheet de regras e balão de espectadores: `role="dialog"`. Lista ao vivo: cada linha é um link/botão com os nicks no nome acessível.
+Picker: `aria-label` da cor (nome, não só o hex). Desafiar: `aria-label` “Desafiar {nick}”. Em partida: `aria-label` “{nick} está jogando”. Olho: `aria-label` “{n} assistindo”. Sheet de regras e balão de espectadores: `role="dialog"`. Lista ao vivo: cada linha é um link/botão com os nicks no nome acessível.

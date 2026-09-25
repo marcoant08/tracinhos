@@ -8,8 +8,10 @@ import {
   COLOR_HEX,
   ERROR_MESSAGES,
   LOBBY_POLL_MS,
+  PRESENCE_POLL_MS,
   RESULT_HOLD_MS,
   TURN_TIMEOUT_MS,
+  isValidNick,
   type ColorId,
   type PublicRoom,
   type Session,
@@ -33,6 +35,7 @@ import {
   saveSession,
   saveWatch,
 } from "@/lib/session";
+import { heartbeatPresence, leavePresenceNow } from "@/lib/presence-client";
 
 export function RoomApp({ code }: { code: string }) {
   const roomCode = code.toUpperCase();
@@ -44,7 +47,9 @@ export function RoomApp({ code }: { code: string }) {
   const [color, setColor] = useState<ColorId>("blue");
   const [toast, setToast] = useState<string | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<{ id: string; nick: string } | null>(null);
   const [wsDown, setWsDown] = useState(false);
+  const kickedRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<object[]>([]);
   const backoff = useRef(1000);
@@ -226,6 +231,15 @@ export function RoomApp({ code }: { code: string }) {
           setElsewhere(true);
           ws.close();
         }
+        if (message.type === "room:kicked") {
+          kickedRef.current = true;
+          clearSession(roomCode);
+          clearOccupy();
+          setSession(null);
+          toastMs.current = 2800;
+          setToast("O host te tirou da sala.");
+          ws.close();
+        }
       }
       ws.onopen = () => {
         backoff.current = 1000;
@@ -261,7 +275,7 @@ export function RoomApp({ code }: { code: string }) {
         }
       };
       ws.onclose = () => {
-        if (stopped || elsewhere) return;
+        if (stopped || elsewhere || kickedRef.current) return;
         setWsDown(true);
         const wait = backoff.current;
         backoff.current = Math.min(wait * 2, 30000);
@@ -310,6 +324,64 @@ export function RoomApp({ code }: { code: string }) {
       setWatch(null);
     }
   }, [room?.status, room?.code, session?.seatToken, watch?.watchToken]);
+
+  useEffect(() => {
+    if (!room || !session) return;
+    if (room.status !== "lobby") return;
+    if (room.players.some((p) => p.id === session.playerId)) return;
+    if (!kickedRef.current) {
+      kickedRef.current = true;
+      toastMs.current = 2800;
+      setToast("O host te tirou da sala.");
+    }
+    clearSession(room.code);
+    clearOccupy();
+    setSession(null);
+  }, [room, session]);
+
+  useEffect(() => {
+    if (elsewhere || room === null) return;
+
+    async function beat() {
+      if (document.visibilityState === "hidden") return;
+      const current = roomRef.current;
+      const identNick = session?.nick ?? watch?.nick ?? nick;
+      const identColor = session?.color ?? watch?.color ?? color;
+      if (!isValidNick(identNick)) return;
+      const occupying =
+        current && (current.status === "lobby" || current.status === "playing") && (session || watch)
+          ? { roomCode: current.code, role: (session ? "seated" : "watching") as "seated" | "watching" }
+          : null;
+      await heartbeatPresence({
+        nick: identNick,
+        color: identColor,
+        occupying,
+      }).catch(() => null);
+    }
+
+    void beat();
+    const id = setInterval(() => void beat(), PRESENCE_POLL_MS);
+    const onPageHide = () => leavePresenceNow();
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [elsewhere, room === null, room?.status, room?.code, session?.seatToken, session?.nick, session?.color, watch?.watchToken, watch?.nick, watch?.color, nick, color]);
+
+  useEffect(() => {
+    return () => {
+      const ident = loadIdentity();
+      const seat = loadSession(roomCode);
+      const watching = loadWatch(roomCode);
+      const identNick = seat?.nick ?? watching?.nick ?? ident?.nick ?? "";
+      const identColor = seat?.color ?? watching?.color ?? ident?.color ?? "blue";
+      if (isValidNick(identNick)) {
+        void heartbeatPresence({ nick: identNick, color: identColor, occupying: null });
+      }
+      clearOccupy();
+    };
+  }, [roomCode]);
 
   useEffect(() => {
     if (room?.status !== "playing" && !holdingBoard) return;
@@ -579,21 +651,12 @@ export function RoomApp({ code }: { code: string }) {
   return (
     <main className="page">
       <RoomCodeBlock code={room.code} count={room.players.length} onCopyCode={() => void copyCode()} />
-      <button className="btn ghost" onClick={() => void copyLink()}>
+      <button className="btn ghost copy-link" onClick={() => void copyLink()}>
         Copiar link
       </button>
 
       <section className="stage">
-        <ul className="list">
-          {room.players.map((p) => (
-            <li key={p.id} style={nickTile(p.color)}>
-              {p.nick}
-              {p.id === room.hostPlayerId ? " · host" : ""}
-              {p.kind === "bot" ? " · bot" : ""}
-            </li>
-          ))}
-        </ul>
-        <div className="field">
+        <div className="field starter">
           <label htmlFor={isHost ? "starter" : undefined}>Quem começa</label>
           {isHost ? (
             <select
@@ -627,6 +690,27 @@ export function RoomApp({ code }: { code: string }) {
             </p>
           )}
         </div>
+        <ul className="list">
+          {room.players.map((p) => (
+            <li key={p.id} style={nickTile(p.color)}>
+              <span className="list-nick">
+                {p.nick}
+                {p.id === room.hostPlayerId ? " · host" : ""}
+                {p.kind === "bot" ? " · bot" : ""}
+              </span>
+              {isHost && p.id !== room.hostPlayerId ? (
+                <button
+                  type="button"
+                  className="list-remove"
+                  aria-label={`Remover ${p.nick}`}
+                  onClick={() => setPendingRemove({ id: p.id, nick: p.nick })}
+                >
+                  Remover
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
         {isHost ? (
           <>
             <button
@@ -649,6 +733,16 @@ export function RoomApp({ code }: { code: string }) {
           <p className="waiting">Esperando o host…</p>
         )}
       </section>
+      {pendingRemove ? (
+        <ConfirmRemove
+          nick={pendingRemove.nick}
+          onCancel={() => setPendingRemove(null)}
+          onConfirm={() => {
+            send({ type: "room:removePlayer", playerId: pendingRemove.id });
+            setPendingRemove(null);
+          }}
+        />
+      ) : null}
       <Toast message={toast} />
       {wsFlag}
     </main>
@@ -906,6 +1000,71 @@ function EyeIcon() {
         d="M12 5c5.2 0 9.3 3.4 10.7 7-1.4 3.6-5.5 7-10.7 7S2.7 15.6 1.3 12C2.7 8.4 6.8 5 12 5Zm0 3.2A3.8 3.8 0 1 0 12 16a3.8 3.8 0 0 0 0-7.8Zm0 2.2a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z"
       />
     </svg>
+  );
+}
+
+function ConfirmRemove({
+  nick,
+  onCancel,
+  onConfirm,
+}: {
+  nick: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <div className="sheet-root center">
+      <button className="sheet-backdrop" aria-label="Cancelar remoção" onClick={onCancel} />
+      <div
+        ref={panelRef}
+        className="confirm-sheet"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-remove-title"
+        aria-describedby="confirm-remove-copy"
+      >
+        <h2 id="confirm-remove-title">Remover {nick}?</h2>
+        <p id="confirm-remove-copy">Tem certeza? {nick} sai da sala.</p>
+        <div className="confirm-actions">
+          <button ref={cancelRef} className="btn ghost" type="button" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button className="btn danger" type="button" onClick={onConfirm}>
+            Remover
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

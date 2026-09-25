@@ -23,7 +23,7 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] Create / GET / join / resume.
 - [x] Unicidade nick/cor, cheio, jogo já iniciado.
-- [x] start / addBot (só host).
+- [x] start / addBot / removePlayer (só host; confirma na UI; humanos e bots).
 - [x] draw + bot loop até vez humana ou fim.
 - [x] Disconnect 30s → bot; resume → humano.
 - [x] `wsEpoch` no disconnect/promote; GET `x-seat-token` e draw devolvem humano (Vercel: isolate velho não transforma quem ainda está jogando).

@@ -122,7 +122,7 @@ Na home, lista **todas** as salas em `playing` (qualquer pessoa), no estilo ches
 **Aceite**
 
 - Cada item: nicks + cores, `{n}/3`, tamanho da grade (ex. `5×5`), placar de quadrados se já houver.
-- Toque → `/sala/:codigo`; se ainda não tiver `watchToken`, cai no formulário **Assistir** (nick/cor).
+- Toque → `/sala/:codigo`; se ainda não tiver `watchToken`, cai no formulário **Assistir** (nick/cor). Se o aparelho tiver `seatToken` daquela sala, a linha destaca **Sua partida** e o toque volta ao assento.
 - Atualiza sozinha (mesmo GET de presença/ao vivo, `PRESENCE_POLL_MS` / 3 s, aba visível).
 - Sala `finished` ou `lobby` **não** entra na lista. Lista vazia: “Nenhuma partida agora.”
 - Sem `seatToken` na listagem. Ordem: mais recentemente atualizadas primeiro.
@@ -134,10 +134,10 @@ Quem está com o app aberto (home visível, nick válido) aparece numa lista **O
 **Aceite**
 
 - Você não aparece na própria lista.
-- Cada linha: caneta/cor + nick + **Desafiar** (se estiver livre).
-- Heartbeat a cada `PRESENCE_POLL_MS` (3 s) enquanto a home está visível. Some da lista ~15 s sem ping (`PRESENCE_TTL_MS`). A partida assistida/jogada continua no poll de 1 s (`LOBBY_POLL_MS`).
+- Cada linha: caneta/cor + nick + **Desafiar** (se estiver livre) ou **Jogando** desabilitado (se já estiver em partida).
+- Heartbeat a cada `PRESENCE_POLL_MS` (3 s) enquanto a home está visível. Some da lista ~15 s sem ping (`PRESENCE_TTL_MS`). Fechar a aba, trocar de app ou esconder a home manda `POST /api/presence/leave` na hora — some da lista no próximo GET e não recebe desafio. A partida assistida/jogada continua no poll de 1 s (`LOBBY_POLL_MS`).
 - Sem nick válido: lista dos outros ainda aparece; você não entra nela até ter nick.
-- Em partida (assento ou `watchToken` numa sala viva): some da lista de desafiáveis; no “Ao vivo” só se estiver **jogando**.
+- Em partida (assento numa sala viva): permanece na lista Online com o botão **Jogando** (desabilitado, cinza). Quem só assiste (`watchToken`) não entra na lista. No “Ao vivo” só se estiver **jogando**.
 - Sem contas: o mesmo nick em dois celulares são duas presenças.
 
 ### 12. Desafiar
@@ -151,7 +151,7 @@ O desafiante toca **Desafiar**. O desafiado vê uma **notificação fixa no topo
 - Aceitar: o servidor cria a sala, senta os dois (desafiante = host), os dois vão para `/sala/:codigo`. Grade = preferência do desafiante (`cols`/`rows` do ping). Nick/cor de cada um; se a cor do aceitante colidir, o servidor escolhe a próxima livre; se o nick colidir, sufixo ` 2`, ` 3`.
 - Recusar ou expirar (**30 s**, `CHALLENGE_TTL_MS`): some a faixa; o desafiante leva toast “{nick} recusou” / “Desafio expirou”.
 - Um desafio pendente por pessoa (enviado ou recebido). Novo desafio com pendente: `challenge_pending`.
-- Desafiar a si mesmo: `challenge_self`. Alvo offline: `challenge_gone`.
+- Desafiar a si mesmo: `challenge_self`. Alvo offline (saiu, `leave`, ou `seenAt` velho): `challenge_gone`. O desafiante **não** vê “Desafio enviado.” — toast “Essa pessoa não está mais online.” e a pessoa some da lista.
 - F5 na home: se o desafio ainda vale, a faixa reaparece.
 
 ## Fora de escopo

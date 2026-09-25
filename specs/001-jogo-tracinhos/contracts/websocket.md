@@ -12,6 +12,8 @@ Mensagens JSON com campo `type`. Uma conexão = no máximo um assento.
 { "type": "room:join", "roomCode": "AB3K", "nick": "Bia", "color": "blue" }
 { "type": "room:resume", "roomCode": "AB3K", "seatToken": "opaque" }
 { "type": "room:addBot" }
+{ "type": "room:removePlayer", "playerId": "p2" }
+{ "type": "room:removeBot", "playerId": "p2" }
 { "type": "room:setStarter", "playerId": null }
 { "type": "room:start" }
 { "type": "game:draw", "edge": { "orientation": "h", "row": 0, "col": 0 } }
@@ -28,9 +30,12 @@ Join/resume também podem ter ocorrido via REST; nesse caso o cliente já tem `s
 { "type": "game:notice", "notice": "timeout_draw", "playerId": "p1", "nick": "Ana" }
 { "type": "room:error", "error": "not_your_turn", "message": "Não é a sua vez." }
 { "type": "resumed_elsewhere" }
+{ "type": "room:kicked" }
 ```
 
 `game:over` é enviado além de `game:state` quando `status` vira `finished`.
+
+`room:kicked` vai só para o assento removido pelo host; o servidor fecha o socket em seguida. O cliente apaga a sessão e não reconecta com aquele token.
 
 ## Erros (`room:error.error`)
 

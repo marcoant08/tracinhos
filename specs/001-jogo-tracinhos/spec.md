@@ -67,8 +67,10 @@ Host adiciona bots (até o limite de 5) e inicia com pelo menos 2 participantes.
 
 **Aceite**
 
-- Não-host não inicia nem adiciona bot (`not_host`).
+- Não-host não inicia, não adiciona e não remove participante (`not_host`).
 - “Adicionar bot” **desabilitado** com 5 assentos (`MAX_PLAYERS`); o servidor ainda recusa `room_full`.
+- Host vê **Remover** em cada outro participante da lista (humanos e bots; não em si). O clique abre confirmação (“Tem certeza?”). Depois de começar, some.
+- Quem é removido perde o assento, recebe `room:kicked` e volta ao join com o aviso “O host te tirou da sala.”
 - Com 1 participante, iniciar falha (`not_enough_players`).
 - Ao iniciar, status vira `playing` e todos recebem o snapshot do tabuleiro vazio.
 - Lista de quem já está na sala (host e join) atualiza **sozinha** quando entra gente ou bot — sem F5.
@@ -138,7 +140,7 @@ Fluxo completo cabe e é usável em ~360×640.
 - Sem ação essencial só no hover.
 - Erros e o aviso de timeout (traço aleatório) em toast no canto superior direito.
 - Botão reage ao toque (animação CSS de pressionar).
-- Existe `/regras` com o resumo jogável (turnos, dois toques, tempo, timeout, bot 1 s). Link só na home e na sala (join/lobby); não na partida nem no resultado.
+- Existe `/regras` com o resumo jogável (objetivo, a grade enche e os traços viram quadrados, turnos, dois toques, tempo, timeout, bot 1 s). Link só na home e na sala (join/lobby); não na partida nem no resultado.
 
 ## Fora de escopo
 

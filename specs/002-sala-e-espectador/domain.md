@@ -29,12 +29,13 @@ seenAt: epoch ms
 ```
 
 - **idle:** home visível, nick válido, ping recente (`now - seenAt < PRESENCE_TTL_MS`), sem assento e sem `watchToken` numa sala viva. O cliente pinga a cada `PRESENCE_POLL_MS` (3 s), não a cada 1 s.
-- **seated:** tem `seatToken` numa sala viva. Não é alvo de desafio; não entra na lista “Desafiar”.
-- **watching:** tem `watchToken` numa sala `playing`. Tampouco é alvo de desafio.
+- **leave:** `POST /api/presence/leave` zera `seenAt`, tira do índice, expira desafio pendente. O token continua válido para o próximo ping.
+- **seated:** tem `seatToken` numa sala viva. Não é alvo de desafio; na lista Online o botão vira **Jogando**.
+- **watching:** tem `watchToken` numa sala `playing`. Tampouco é alvo de desafio; não entra na lista Online.
 - Ping recusa token inválido. Nick/cor iguais às regras da v1.
 - Índice Redis: `presence:{id}` (TTL curto) + conjunto `presence:index`.
 
-A lista pública **não** inclui `presenceToken`. Só `presenceId`, nick, cor.
+A lista pública **não** inclui `presenceToken`. Só `presenceId`, nick, cor, `status`.
 
 ## Desafio
 
@@ -45,7 +46,7 @@ roomCode: string | null,
 createdAt, expiresAt
 ```
 
-- Criar: `from` e `to` idle, distintos, sem outro `pending` envolvendo qualquer um dos dois.
+- Criar: `from` e `to` idle, distintos, **ambos frescos** (`isFresh`), sem outro `pending` envolvendo qualquer um dos dois. Alvo que já deu leave ou expirou: `challenge_gone` — o desafio **não** é criado.
 - Aceitar (só `to`, ainda `pending`, não expirado): cria sala, senta `from` (host) e `to`, `status=accepted`, `roomCode` preenchido. Os dois viram `seated`.
 - Recusar: `declined`. Expirar: `expired` (no GET, se `now ≥ expiresAt`).
 - Snapshot de inbox do `to`: desafios `pending` válidos. Do `from`: o pendente que ele enviou + o `accepted` recente (para redirecionar).
@@ -68,7 +69,7 @@ id, nick, color, watchToken, seenAt
 - Snapshot público: `watchers: [{ id, nick, color }]` (sem token) e dá para derivar o número.
 - GET com `x-watch-token` renova `seenAt`. Sem ping por `WATCHER_TTL_MS`: some da lista.
 - `watch:{token}` no Redis → `{ roomCode, watcherId }`.
-- Não joga, não vira bot, não altera `starter` / start / addBot.
+- Não joga, não vira bot, não altera `starter` / start / addBot / removePlayer.
 
 ## Traço (só apresentação)
 

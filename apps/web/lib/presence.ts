@@ -141,6 +141,30 @@ export async function getLobby(presenceToken?: string | null): Promise<LobbySnap
   };
 }
 
+export async function leavePresence(presenceToken: string): Promise<{ ok: true }> {
+  const token = presenceToken.trim();
+  if (!token) return { ok: true };
+  const presence = await loadPresenceByToken(token);
+  if (!presence) return { ok: true };
+  if (presence.pendingChallengeId) {
+    const challenge = await loadChallenge(presence.pendingChallengeId);
+    if (challenge && challenge.status === "pending") {
+      challenge.status = "expired";
+      await saveChallenge(challenge);
+      await clearPending(challenge.fromId, challenge.id);
+      await clearPending(challenge.toId, challenge.id);
+    }
+  }
+  const latest = (await loadPresence(presence.presenceId)) ?? presence;
+  latest.seenAt = 0;
+  latest.status = "idle";
+  latest.roomCode = null;
+  latest.pendingChallengeId = null;
+  await savePresence(latest);
+  await removeFromIndex(latest.presenceId);
+  return { ok: true };
+}
+
 export async function createChallenge(
   presenceToken: string,
   toPresenceId: string,
@@ -148,7 +172,7 @@ export async function createChallenge(
   const from = await loadPresenceByToken(presenceToken);
   if (!from) throw new RoomError("invalid_token");
   if (from.presenceId === toPresenceId) throw new RoomError("challenge_self");
-  if (!isValidNick(from.nick)) throw new RoomError("invalid_nick");
+  if (!isValidNick(from.nick) || !isFresh(from)) throw new RoomError("invalid_token");
 
   return withLock("lock:challenges", async () => {
     const freshFrom = (await loadPresence(from.presenceId)) ?? from;
@@ -159,6 +183,9 @@ export async function createChallenge(
     await expireIfNeeded(to);
     const fromAgain = (await loadPresence(freshFrom.presenceId)) ?? freshFrom;
     const toAgain = (await loadPresence(to.presenceId)) ?? to;
+    if (!isFresh(fromAgain) || !isFresh(toAgain) || !isValidNick(toAgain.nick)) {
+      throw new RoomError("challenge_gone");
+    }
     if (fromAgain.pendingChallengeId || toAgain.pendingChallengeId) {
       throw new RoomError("challenge_pending");
     }
@@ -245,7 +272,7 @@ export async function declineChallenge(presenceToken: string, challengeId: strin
 }
 
 async function listOnline(exceptId?: string): Promise<PublicPresence[]> {
-  const ids = (await loadJson<string[]>(INDEX_KEY)) ?? [];
+  const ids = await loadPresenceIds();
   const online: PublicPresence[] = [];
   const keep: string[] = [];
   for (const id of ids) {
@@ -253,7 +280,8 @@ async function listOnline(exceptId?: string): Promise<PublicPresence[]> {
     if (!presence) continue;
     keep.push(id);
     if (exceptId && presence.presenceId === exceptId) continue;
-    if (!isFresh(presence) || presence.status !== "idle" || !isValidNick(presence.nick)) continue;
+    if (!isFresh(presence) || !isValidNick(presence.nick)) continue;
+    if (presence.status === "watching") continue;
     online.push(publicOf(presence));
   }
   if (keep.length !== ids.length) await saveJson(INDEX_KEY, keep, ROOM_TTL_SECONDS);
@@ -283,7 +311,13 @@ async function pendingFor(
   if (mine !== me.presenceId) return null;
   const peerId = side === "from" ? challenge.toId : challenge.fromId;
   const peer = await loadPresence(peerId);
-  if (!peer) return null;
+  if (!peer || !isFresh(peer)) {
+    challenge.status = "expired";
+    await saveChallenge(challenge);
+    await clearPending(challenge.fromId, challenge.id);
+    await clearPending(challenge.toId, challenge.id);
+    return null;
+  }
   return { challenge, peer };
 }
 
@@ -314,14 +348,34 @@ function isFresh(presence: Presence) {
 }
 
 function publicOf(presence: Presence): PublicPresence {
-  return { presenceId: presence.presenceId, nick: presence.nick, color: presence.color };
+  return {
+    presenceId: presence.presenceId,
+    nick: presence.nick,
+    color: presence.color,
+    status: presence.status,
+  };
+}
+
+async function loadPresenceIds(): Promise<string[]> {
+  const raw = await loadJson<unknown>(INDEX_KEY);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((id): id is string => typeof id === "string" && id.length > 0);
 }
 
 async function addToIndex(id: string) {
   await withLock("lock:presence-index", async () => {
-    const ids = (await loadJson<string[]>(INDEX_KEY)) ?? [];
+    const ids = await loadPresenceIds();
     if (ids.includes(id)) return;
     await saveJson(INDEX_KEY, [...ids, id], ROOM_TTL_SECONDS);
+  });
+}
+
+async function removeFromIndex(id: string) {
+  await withLock("lock:presence-index", async () => {
+    const ids = await loadPresenceIds();
+    const next = ids.filter((item) => item !== id);
+    if (next.length === ids.length) return;
+    await saveJson(INDEX_KEY, next, ROOM_TTL_SECONDS);
   });
 }
 

@@ -147,6 +147,7 @@ export type PublicPresence = {
   presenceId: string;
   nick: string;
   color: ColorId;
+  status: PresenceStatus;
 };
 
 export type LiveRoom = {
@@ -205,6 +206,8 @@ export type ClientMessage =
   | { type: "room:join"; roomCode: string; nick: string; color: ColorId }
   | { type: "room:resume"; roomCode: string; seatToken: string }
   | { type: "room:addBot" }
+  | { type: "room:removeBot"; playerId: string }
+  | { type: "room:removePlayer"; playerId: string }
   | { type: "room:setStarter"; playerId: string | null }
   | { type: "room:start" }
   | { type: "game:draw"; edge: { orientation: "h" | "v"; row: number; col: number } };
@@ -215,7 +218,8 @@ export type ServerMessage =
   | { type: "game:over"; room: PublicRoom }
   | { type: "game:notice"; notice: "timeout_draw"; playerId: string; nick: string }
   | { type: "room:error"; error: ApiErrorCode; message: string }
-  | { type: "resumed_elsewhere" };
+  | { type: "resumed_elsewhere" }
+  | { type: "room:kicked" };
 
 export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   room_not_found: "Sala não encontrada.",
@@ -267,6 +271,13 @@ export function sessionStorageKey(roomCode: string): string {
 
 function displayBotNick(name: string) {
   return `Bot ${name}`;
+}
+
+export function pickBotColor(taken: readonly ColorId[], random: () => number = Math.random): ColorId | null {
+  const free = COLOR_IDS.filter((id) => !taken.includes(id));
+  if (free.length === 0) return null;
+  const index = Math.min(free.length - 1, Math.max(0, Math.floor(random() * free.length)));
+  return free[index];
 }
 
 export function pickBotNick(takenNicks: string[], random: () => number = Math.random): string {

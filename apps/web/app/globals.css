@@ -231,17 +231,25 @@ input::placeholder {
   color: #8ea0d4;
 }
 
+.field.starter {
+  margin-bottom: 10px;
+}
+
+.field.starter select,
 .starter-read {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0;
-  min-height: 48px;
-  border-radius: 14px;
+  min-height: 64px;
+  height: 64px;
+  border-radius: 18px;
   border: 2px solid var(--line);
   background: var(--bg-2);
   color: var(--text);
-  padding: 0 14px;
+  padding: 0 16px;
+  font-size: 1.35rem;
+  font-weight: 800;
 }
 
 .select-size {
@@ -285,6 +293,11 @@ input::placeholder {
   color: var(--text);
 }
 
+.btn.danger {
+  background: var(--danger);
+  color: var(--paper);
+}
+
 .error {
   color: var(--danger);
   font-size: 0.88rem;
@@ -321,6 +334,10 @@ input::placeholder {
   opacity: 0.35;
 }
 
+.color svg {
+  overflow: visible;
+}
+
 .color:disabled::after {
   content: "";
   position: absolute;
@@ -353,11 +370,12 @@ input::placeholder {
 }
 
 .hud-top {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 12px;
   height: 104px;
-  overflow: hidden;
 }
 
 .turn {
@@ -388,6 +406,7 @@ input::placeholder {
 
 .turn-pen svg {
   display: block;
+  overflow: visible;
 }
 
 .turn.you {
@@ -478,6 +497,8 @@ input::placeholder {
 }
 
 .score {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -732,6 +753,7 @@ input::placeholder {
 
 .watchers-wrap {
   position: relative;
+  z-index: 3;
 }
 
 .watchers-btn {
@@ -748,14 +770,14 @@ input::placeholder {
   inset: 0;
   border: 0;
   background: transparent;
-  z-index: 20;
+  z-index: 30;
 }
 
 .watchers-balloon {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 21;
+  z-index: 31;
   min-width: 180px;
   padding: 12px 14px;
   border-radius: 14px;
@@ -872,6 +894,14 @@ input::placeholder {
   font-size: 0.92rem;
 }
 
+.btn.compact.playing:disabled {
+  background: var(--bg-2);
+  border: 2px solid var(--line);
+  color: var(--muted);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
 .live-row {
   display: flex;
   flex-direction: column;
@@ -881,6 +911,19 @@ input::placeholder {
   background: var(--bg-2);
   color: inherit;
   text-decoration: none;
+}
+
+.live-row.mine {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), 0 0 0 3px var(--cta);
+}
+
+.live-yours {
+  color: var(--cta);
+  font-weight: 800;
+}
+
+.copy-link {
+  margin-bottom: 20px;
 }
 
 .live-people {
@@ -905,6 +948,10 @@ input::placeholder {
   justify-content: center;
 }
 
+.sheet-root.center {
+  align-items: center;
+}
+
 .sheet-backdrop {
   position: absolute;
   inset: 0;
@@ -923,6 +970,40 @@ input::placeholder {
   border-radius: 24px 24px 0 0;
   padding: 16px 18px calc(20px + env(safe-area-inset-bottom));
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.confirm-sheet {
+  position: relative;
+  width: min(400px, calc(100% - 32px));
+  background: var(--bg);
+  border-radius: 24px;
+  padding: 22px 20px 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.confirm-sheet h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+}
+
+.confirm-sheet p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirm-actions .btn {
+  min-height: 56px;
+  font-size: 1.15rem;
 }
 
 .sheet-head {
@@ -1028,6 +1109,25 @@ input::placeholder {
   font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.list-nick {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-remove {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 2px solid currentColor;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .waiting {

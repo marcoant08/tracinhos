@@ -57,8 +57,8 @@ Nick + grade de cores, **pré-preenchidos** com `tracinhos:identity` se houver. 
 - Código grande + botão **“Copiar link”**: copia a URL absoluta da sala (`{origin}/sala/{codigo}`), não só o código. Toast curto “Link copiado”.
 - Link **Regras** → `/regras` (também no join e na home; **não** na partida nem no resultado).
 - Lista de jogadores (bolinha da cor **grande** + nick + host/bot). Atualiza sozinha quando alguém entra (WS e GET a cada `LOBBY_POLL_MS` / 1 s, aba visível). Na **partida** o mesmo GET: o WS da Vercel não atravessa instâncias, então o traço do outro celular só chega pelo poll. Sem poll no resultado.
-- Host: “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), select **Quem começa** (padrão **Aleatório**; opções = nicks da sala), “Começar” (desabilitado se < 2).
-- Não-host: **não edita** quem começa; vê o mesmo rótulo e o valor atual (Aleatório ou nick + cor) + “Esperando o host…”.
+- Host: abaixo de **Copiar link**, select **Quem começa** (mesmo `min-height` das linhas da lista; padrão **Aleatório**; opções = nicks da sala), depois a lista. “Adicionar bot” (desabilitado se `players.length === MAX_PLAYERS`), **Remover** em cada linha que não é o host (humano ou bot; `aria-label` “Remover {nick}”). O clique abre diálogo centrado: “Remover {nick}?”, “Tem certeza? {nick} sai da sala.”, **Cancelar** / **Remover**. Só o segundo envia `room:removePlayer`. “Começar” (desabilitado se < 2).
+- Não-host: **não edita** quem começa; vê o mesmo rótulo e o valor atual (Aleatório ou nick + cor) acima da lista + “Esperando o host…”.
 
 ### Playing
 
@@ -104,7 +104,7 @@ Quando o snapshot chega `finished`, a UI **permanece na partida 3 s** (`RESULT_H
 
 ## `/regras`
 
-Página estática, mesma visual do lobby. Explica: objetivo, dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 40 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fecham se puderem e evitam abrir quadrado pro próximo, fim. Link de volta ao lobby.
+Página estática, mesma visual do lobby. Explica: objetivo, **com o passar do jogo os traços se acumulam e inevitavelmente viram quadrados** (começo calmo, final decide), dois toques, **fechar quadrado obriga a traçar de novo** (sem fechar, a vez passa), 40 s, timeout = traço aleatório no nome de quem estava na vez (extra se fechar), bots pensam **1 s**, fecham se puderem e evitam abrir quadrado pro próximo, fim. Link de volta ao lobby.
 
 ## Acessibilidade mínima
 

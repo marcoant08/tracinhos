@@ -16,15 +16,16 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { PenIcon } from "@/components/Pen";
 import { Toast } from "@/components/Toast";
 import {
+  clearOccupy,
   loadGridPref,
   loadIdentity,
-  loadOccupy,
   loadPresence,
+  loadSession,
   saveGridPref,
   saveIdentity,
-  savePresence,
   saveSession,
 } from "@/lib/session";
+import { fetchLobby, heartbeatPresence, leavePresenceNow } from "@/lib/presence-client";
 
 const GRID_OPTIONS = [
   ...Array.from({ length: 9 }, (_, i) => {
@@ -58,6 +59,7 @@ export default function HomePage() {
     outgoing: null,
     accepted: null,
   });
+  const [myLiveCodes, setMyLiveCodes] = useState<string[]>([]);
   const nickRef = useRef(nick);
   const colorRef = useRef(color);
   const colsRef = useRef(cols);
@@ -70,6 +72,10 @@ export default function HomePage() {
   const publishRef = useRef<(overrides?: { nick?: string; color?: ColorId }) => Promise<void>>(
     async () => {},
   );
+
+  useEffect(() => {
+    setMyLiveCodes(lobby.live.filter((live) => loadSession(live.code)).map((live) => live.code));
+  }, [lobby.live]);
 
   useEffect(() => {
     const pref = loadIdentity();
@@ -93,6 +99,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let stopped = false;
+    clearOccupy();
 
     async function publish(overrides?: { nick?: string; color?: ColorId }) {
       if (document.visibilityState === "hidden") return;
@@ -120,12 +127,21 @@ export default function HomePage() {
     publishRef.current = publish;
     void publish();
     const id = setInterval(() => void publish(), PRESENCE_POLL_MS);
-    const onVis = () => void publish();
+    const onVis = () => {
+      if (document.visibilityState === "hidden") {
+        leavePresenceNow();
+        return;
+      }
+      void publish();
+    };
+    const onPageHide = () => leavePresenceNow();
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
       stopped = true;
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [router]);
 
@@ -198,12 +214,22 @@ export default function HomePage() {
       headers: { "Content-Type": "application/json", "x-presence-token": token },
       body: JSON.stringify({ toPresenceId }),
     });
-    const data = await res.json();
+    const data = (await res.json()) as { error?: string; message?: string };
     if (!res.ok) {
+      if (data.error === "challenge_gone") {
+        setToast("Essa pessoa não está mais online.");
+        setLobby((prev) => ({
+          ...prev,
+          online: prev.online.filter((person) => person.presenceId !== toPresenceId),
+        }));
+        void publishRef.current();
+        return;
+      }
       setToast(data.message ?? ERROR_MESSAGES[data.error as keyof typeof ERROR_MESSAGES]);
       return;
     }
     setToast("Desafio enviado.");
+    void publishRef.current();
   }
 
   async function accept() {
@@ -268,25 +294,31 @@ export default function HomePage() {
             <p className="empty-note">Ninguém online agora.</p>
           ) : (
             <ul className="people-list">
-              {lobby.online.map((person) => (
-                <li key={person.presenceId}>
-                  <span className="person-nick">
-                    <span className="turn-pen" style={{ color: COLOR_HEX[person.color] }}>
-                      <PenIcon size={20} />
+              {lobby.online.map((person) => {
+                const playing = person.status === "seated";
+                return (
+                  <li key={person.presenceId}>
+                    <span className="person-nick">
+                      <span className="turn-pen" style={{ color: COLOR_HEX[person.color] }}>
+                        <PenIcon size={20} />
+                      </span>
+                      {person.nick}
                     </span>
-                    {person.nick}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost compact"
-                    aria-label={`Desafiar ${person.nick}`}
-                    disabled={Boolean(lobby.outgoing)}
-                    onClick={() => void challenge(person.presenceId)}
-                  >
-                    Desafiar
-                  </button>
-                </li>
-              ))}
+                    <button
+                      type="button"
+                      className={playing ? "btn compact playing" : "btn ghost compact"}
+                      aria-label={playing ? `${person.nick} está jogando` : `Desafiar ${person.nick}`}
+                      disabled={playing || Boolean(lobby.outgoing)}
+                      onClick={() => {
+                        if (playing) return;
+                        void challenge(person.presenceId);
+                      }}
+                    >
+                      {playing ? "Jogando" : "Desafiar"}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -297,39 +329,43 @@ export default function HomePage() {
             <p className="empty-note">Nenhuma partida agora.</p>
           ) : (
             <ul className="live-list">
-              {lobby.live.map((live) => {
-                const scores = live.players.map((p) => p.squares).join("–");
-                const names = live.players.map((p) => p.nick).join(", ");
-                return (
-                  <li key={live.code}>
-                    <a
-                      className="live-row"
-                      href={`/sala/${live.code}`}
-                      aria-label={`Assistir ${names}`}
-                    >
-                      <span className="live-people">
-                        {live.players.map((p) => (
-                          <span key={p.nick} className="live-player">
-                            <span className="turn-pen" style={{ color: COLOR_HEX[p.color] }}>
-                              <PenIcon size={16} />
+              {[...lobby.live]
+                .sort((a, b) => Number(myLiveCodes.includes(b.code)) - Number(myLiveCodes.includes(a.code)))
+                .map((live) => {
+                  const scores = live.players.map((p) => p.squares).join("–");
+                  const names = live.players.map((p) => p.nick).join(", ");
+                  const mine = myLiveCodes.includes(live.code);
+                  return (
+                    <li key={live.code}>
+                      <a
+                        className={mine ? "live-row mine" : "live-row"}
+                        href={`/sala/${live.code}`}
+                        aria-label={mine ? `Voltar para sua partida com ${names}` : `Assistir ${names}`}
+                      >
+                        <span className="live-people">
+                          {live.players.map((p) => (
+                            <span key={p.nick} className="live-player">
+                              <span className="turn-pen" style={{ color: COLOR_HEX[p.color] }}>
+                                <PenIcon size={16} />
+                              </span>
+                              {p.nick}
                             </span>
-                            {p.nick}
+                          ))}
+                        </span>
+                        <span className="live-meta">
+                          {mine ? <span className="live-yours">Sua partida</span> : null}
+                          <strong>{scores}</strong>
+                          <span>
+                            {live.cols}×{live.rows}
                           </span>
-                        ))}
-                      </span>
-                      <span className="live-meta">
-                        <strong>{scores}</strong>
-                        <span>
-                          {live.cols}×{live.rows}
+                          <span>
+                            {live.players.length}/{MAX_PLAYERS}
+                          </span>
                         </span>
-                        <span>
-                          {live.players.length}/{MAX_PLAYERS}
-                        </span>
-                      </span>
-                    </a>
-                  </li>
-                );
-              })}
+                      </a>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </section>
@@ -398,49 +434,4 @@ export default function HomePage() {
       <Toast message={toast} />
     </main>
   );
-}
-
-async function fetchLobby(presenceToken?: string): Promise<LobbySnapshot | null> {
-  const headers: Record<string, string> = {};
-  if (presenceToken) headers["x-presence-token"] = presenceToken;
-  let res = await fetch("/api/lobby", { cache: "no-store", headers });
-  if (!res.ok && presenceToken) {
-    res = await fetch("/api/lobby", { cache: "no-store" });
-  }
-  if (!res.ok) return null;
-  return (await res.json()) as LobbySnapshot;
-}
-
-async function heartbeatPresence(input: {
-  nick: string;
-  color: ColorId;
-  cols: number;
-  rows: number;
-}): Promise<{ presenceId: string; presenceToken: string } | null> {
-  const body = {
-    nick: input.nick,
-    color: input.color,
-    cols: input.cols,
-    rows: input.rows,
-    occupying: loadOccupy(),
-  };
-  let token = loadPresence()?.presenceToken ?? "";
-  for (let i = 0; i < 2; i++) {
-    const res = await fetch("/api/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, presenceToken: token }),
-    });
-    const data = (await res.json()) as {
-      presence?: { presenceId: string; presenceToken: string };
-      error?: string;
-    };
-    if (res.ok && data.presence) {
-      savePresence(data.presence);
-      return data.presence;
-    }
-    if (data.error !== "invalid_token") return null;
-    token = "";
-  }
-  return null;
 }

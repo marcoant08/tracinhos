@@ -24,6 +24,7 @@ import {
   isValidNick,
   nickKey,
   normalizeNick,
+  pickBotColor,
   pickBotNick,
   type ColorId,
   type LiveRoom,
@@ -432,7 +433,7 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
     if (room.status !== "lobby") throw new RoomError("game_already_started");
     if (room.hostPlayerId !== actorId) throw new RoomError("not_host");
     if (room.players.length >= MAX_PLAYERS) throw new RoomError("room_full");
-    const color = COLOR_IDS.find((id) => !room.players.some((p) => p.color === id));
+    const color = pickBotColor(room.players.map((p) => p.color));
     if (!color) throw new RoomError("color_taken");
     const nick = pickBotNick(allNicks(room));
     room.players.push({
@@ -447,6 +448,29 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
     return {};
   });
   return result.room;
+}
+
+export async function removePlayer(
+  code: string,
+  actorId: string,
+  playerId: string,
+): Promise<PublicRoom> {
+  const result = await mutate(code, async (room) => {
+    if (room.status !== "lobby") throw new RoomError("game_already_started");
+    if (room.hostPlayerId !== actorId) throw new RoomError("not_host");
+    if (playerId === room.hostPlayerId || playerId === actorId) throw new RoomError("not_in_room");
+    const index = room.players.findIndex((p) => p.id === playerId);
+    if (index < 0) throw new RoomError("not_in_room");
+    room.players.splice(index, 1);
+    if (room.starterPlayerId === playerId) room.starterPlayerId = null;
+    await clearSeatForPlayer(room.code, playerId);
+    return { kickedId: playerId };
+  });
+  return result.room;
+}
+
+export async function removeBot(code: string, actorId: string, playerId: string): Promise<PublicRoom> {
+  return removePlayer(code, actorId, playerId);
 }
 
 export async function setStarter(
@@ -670,11 +694,18 @@ async function saveRoom(room: Room): Promise<void> {
 }
 
 async function saveSeat(token: string, roomCode: string, playerId: string) {
-  await getStore().set(
-    `seat:${token}`,
-    JSON.stringify({ roomCode, playerId }),
-    ROOM_TTL_SECONDS,
-  );
+  const store = getStore();
+  const normalized = roomCode.toUpperCase();
+  await store.set(`seat:${token}`, JSON.stringify({ roomCode: normalized, playerId }), ROOM_TTL_SECONDS);
+  await store.set(`seat-player:${normalized}:${playerId}`, token, ROOM_TTL_SECONDS);
+}
+
+async function clearSeatForPlayer(roomCode: string, playerId: string) {
+  const store = getStore();
+  const normalized = roomCode.toUpperCase();
+  const token = await store.get(`seat-player:${normalized}:${playerId}`);
+  if (token) await store.del(`seat:${token}`);
+  await store.del(`seat-player:${normalized}:${playerId}`);
 }
 
 async function loadSeat(token: string): Promise<{ roomCode: string; playerId: string } | null> {

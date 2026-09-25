@@ -8,6 +8,17 @@ export function RulesContent() {
         vale para todos com a maior pontuação.
       </p>
 
+      <h2>Com o passar do jogo</h2>
+      <p>
+        Cada vez alguém liga dois pontos. No começo sobra espaço e os traços
+        ficam sozinhos — quase ninguém fecha nada. Depois eles se acumulam: um
+        lado aqui, outro ali, até cercarem um quadradinho. A grade é finita, então
+        isso é inevitável: <strong>os traços viram quadrados</strong>. Chega uma
+        hora em que cada traço novo fecha um (ou dois) ou deixa um quase pronto
+        para o próximo. Quem fecha, pinta e joga outra vez — por isso o começo é
+        calmo e o final decide o placar.
+      </p>
+
       <h2>Como traçar</h2>
       <ol>
         <li>Na sua vez, toque um ponto. Ele pisca.</li>

@@ -174,7 +174,9 @@ wsEpoch: number
 Transições de assento:
 
 - join (lobby): cria humano `connected=true`, `wsEpoch=1`.
-- addBot (lobby, host, < 5): cria bot com nick de `BOT_NICKS` (ou fallback) e primeira cor livre. `wsEpoch=0`.
+- addBot (lobby, host, < 5): cria bot com nick de `BOT_NICKS` (ou fallback) e uma cor livre aleatória. `wsEpoch=0`.
+- removePlayer (lobby, host): tira outro assento (humano ou bot; nunca o host). Invalida o `seatToken` de quem saiu. Se era o `starterPlayerId`, volta a `null` (Aleatório). `removeBot` é o mesmo comando.
+- Quem foi removido recebe `room:kicked` e não reconecta com o token antigo.
 - disconnect do WS: `connected=false`, `disconnectedAt=now` **só se** `wsEpoch` ainda é o da conexão que fechou.
 - GET com `x-seat-token` ou `game:draw`: presença — `kind=human`, `connected=true`, `disconnectedAt=null` (não mexe no `wsEpoch`).
 - após 30s desconectado (e sem presença): `kind="bot"` (mesmo id/nick/cor), e só se o `wsEpoch` do timer ainda bate.

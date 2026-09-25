@@ -4,6 +4,7 @@ import {
   createChallenge,
   declineChallenge,
   getLobby,
+  leavePresence,
   pingPresence,
 } from "./presence";
 import {
@@ -58,6 +59,11 @@ export async function handleRest(
           occupying,
         }),
       );
+    }
+
+    if (req.method === "POST" && pathname === "/api/presence/leave") {
+      const body = await readJson(req);
+      return send(res, 200, await leavePresence(asString(body.presenceToken)));
     }
 
     if (req.method === "POST" && pathname === "/api/challenges") {

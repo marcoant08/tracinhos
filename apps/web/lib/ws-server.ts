@@ -9,6 +9,7 @@ import { RoomError } from "./errors";
 import {
   addBot,
   drawEdge,
+  removeBot,
   joinRoom,
   markDisconnected,
   promoteDisconnectedToBot,
@@ -87,6 +88,15 @@ function addToRoom(roomCode: string, socket: SocketLike) {
   }
 }
 
+function kickPlayer(roomCode: string, playerId: string) {
+  const code = roomKey(roomCode);
+  for (const peer of byToken.values()) {
+    if (peer.roomCode !== code || peer.playerId !== playerId) continue;
+    send(peer.socket, { type: "room:kicked" });
+    peer.socket.close();
+  }
+}
+
 function removeFromRoom(roomCode: string, socket: SocketLike) {
   const code = roomKey(roomCode);
   const set = byRoom.get(code);
@@ -153,6 +163,13 @@ export function bindSocket(socket: SocketLike) {
 
       if (message.type === "room:addBot") {
         const room = await addBot(binding.roomCode, binding.playerId);
+        send(socket, { type: "game:state", room });
+        return;
+      }
+
+      if (message.type === "room:removeBot" || message.type === "room:removePlayer") {
+        const room = await removeBot(binding.roomCode, binding.playerId, message.playerId);
+        kickPlayer(binding.roomCode, message.playerId);
         send(socket, { type: "game:state", room });
         return;
       }

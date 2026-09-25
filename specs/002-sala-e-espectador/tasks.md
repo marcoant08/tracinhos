@@ -6,7 +6,8 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] `MAX_PLAYERS = 3` em game + shared + recusa `room_full` no 4º.
 - [x] Tipos e erros: `challenge_*`, presença, `LiveRoom`.
-- [x] REST `/api/lobby`, `/api/challenges`, ping.
+- [x] REST `/api/lobby`, `/api/challenges`, ping, `POST /api/presence/leave`.
+- [x] Desafio recusa alvo que já saiu (`challenge_gone`); cliente não mostra “enviado”.
 
 ## 2. Sala (3 jogadores, código, n/3, ?)
 
@@ -29,5 +30,5 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 ## 5. Online + desafio
 
 - [x] `tracinhos:presence` + ping na home visível a cada `PRESENCE_POLL_MS` (3 s).
-- [x] Lista online (sem você; sem seated).
+- [x] Lista online (sem você; seated vira “Jogando”).
 - [x] Desafiar → faixa no topo do alvo; aceitar senta os dois; recusar/expirar 30 s.

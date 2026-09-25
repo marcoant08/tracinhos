@@ -30,7 +30,7 @@ export function ColorPicker({
             style={{ color: COLOR_HEX[id] }}
             onClick={() => onChange(id)}
           >
-            <PenIcon size={32} />
+            <PenIcon size={40} />
           </button>
         );
       })}
