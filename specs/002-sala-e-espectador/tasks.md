@@ -31,4 +31,4 @@ Cada item só é “feito” se o aceite da spec correspondente passar.
 
 - [x] `tracinhos:presence` + ping na home visível a cada `PRESENCE_POLL_MS` (3 s).
 - [x] Lista online (sem você; seated vira “Jogando”).
-- [x] Desafiar → faixa no topo do alvo; aceitar senta os dois; recusar/expirar 30 s.
+- [x] Desafiar → balão fixo no topo do alvo; aceitar senta os dois; recusar/expirar 15 s.

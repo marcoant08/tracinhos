@@ -9,7 +9,7 @@ Complementa [001/domain.md](../001-jogo-tracinhos/domain.md). O motor do traço 
 | `MAX_PLAYERS` | **3** (substitui o 5 da v1) |
 | `PRESENCE_POLL_MS` | 3000 |
 | `PRESENCE_TTL_MS` | 15000 |
-| `CHALLENGE_TTL_MS` | 30000 |
+| `CHALLENGE_TTL_MS` | 15000 |
 | `STROKE_GROW_MS` | 280 |
 | `LIVE_LIST_MAX` | 40 |
 | `MAX_WATCHERS` | 30 |

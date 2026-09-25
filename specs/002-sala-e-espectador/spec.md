@@ -109,8 +109,8 @@ Quem tem assento em `playing` vê quantas pessoas assistem.
 
 **Aceite**
 
-- Ícone de **olho** + número (`0` se ninguém). Toque ≥ 44px.
-- Clique no número (ou no olho) abre um **balão** na mesma tela: lista de nicks (caneta da cor de cada um). Vazio: “Ninguém assistindo”.
+- Ícone de **olho** + número **só se houver pelo menos um espectador**. Sem ninguém assistindo, o olho não aparece.
+- Clique no número (ou no olho) abre um **balão** na mesma tela: lista de nicks (caneta da cor de cada um).
 - Fecha ao clicar fora, no olho de novo ou Escape. Não navega, não muda de rota, não empurra o tabuleiro de forma permanente.
 - Atualiza com o snapshot (poll 1 s). Espectador **não** precisa do olho (só quem joga).
 - `{n}/3` continua sendo só jogadores (assentos), não espectadores.
@@ -149,7 +149,7 @@ O desafiante toca **Desafiar**. O desafiado vê uma **notificação fixa no topo
 - Notificação: caneta/cor + “{nick} te desafiou” + grade + **Aceitar** / **Recusar**. Área de toque ≥ 44px.
 - Aparece na **home** do desafiado (onde está o heartbeat). Não interrompe quem está jogando ou assistindo — alvo ocupado recusa `challenge_busy`.
 - Aceitar: o servidor cria a sala, senta os dois (desafiante = host), os dois vão para `/sala/:codigo`. Grade = preferência do desafiante (`cols`/`rows` do ping). Nick/cor de cada um; se a cor do aceitante colidir, o servidor escolhe a próxima livre; se o nick colidir, sufixo ` 2`, ` 3`.
-- Recusar ou expirar (**30 s**, `CHALLENGE_TTL_MS`): some a faixa; o desafiante leva toast “{nick} recusou” / “Desafio expirou”.
+- Recusar ou expirar (**15 s**, `CHALLENGE_TTL_MS`): some o balão; o desafiante leva toast “{nick} recusou” / “Desafio expirou”.
 - Um desafio pendente por pessoa (enviado ou recebido). Novo desafio com pendente: `challenge_pending`.
 - Desafiar a si mesmo: `challenge_self`. Alvo offline (saiu, `leave`, ou `seenAt` velho): `challenge_gone`. O desafiante **não** vê “Desafio enviado.” — toast “Essa pessoa não está mais online.” e a pessoa some da lista.
 - F5 na home: se o desafio ainda vale, a faixa reaparece.

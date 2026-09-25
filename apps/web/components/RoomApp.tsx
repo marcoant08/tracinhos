@@ -23,6 +23,7 @@ import { HelpButton } from "./HelpButton";
 import { ScoreSquare, ScoreStroke } from "./Marks";
 import { PenIcon } from "./Pen";
 import { Toast } from "./Toast";
+import { TurnTimer } from "./TurnTimer";
 import {
   clearOccupy,
   clearSession,
@@ -56,7 +57,8 @@ export function RoomApp({ code }: { code: string }) {
   const toastMs = useRef(2200);
   const playerIdRef = useRef<string | null>(null);
   const wasPlayingRef = useRef(false);
-  const [holdingBoard, setHoldingBoard] = useState(false);
+  const releasedHoldRef = useRef(false);
+  const [, setHoldTick] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [pendingEdges, setPendingEdges] = useState<Edge[]>([]);
   const roomRef = useRef(room);
@@ -296,19 +298,19 @@ export function RoomApp({ code }: { code: string }) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  if (room?.status === "playing") {
+    wasPlayingRef.current = true;
+    releasedHoldRef.current = false;
+  }
+  const holdingBoard =
+    room?.status === "finished" && wasPlayingRef.current && !releasedHoldRef.current;
+
   useEffect(() => {
-    if (!room) return;
-    if (room.status === "playing") {
-      wasPlayingRef.current = true;
-      setHoldingBoard(false);
-      return;
-    }
-    if (room.status !== "finished" || !wasPlayingRef.current) {
-      setHoldingBoard(false);
-      return;
-    }
-    setHoldingBoard(true);
-    const t = setTimeout(() => setHoldingBoard(false), RESULT_HOLD_MS);
+    if (room?.status !== "finished" || !wasPlayingRef.current || releasedHoldRef.current) return;
+    const t = setTimeout(() => {
+      releasedHoldRef.current = true;
+      setHoldTick((n) => n + 1);
+    }, RESULT_HOLD_MS);
     return () => clearTimeout(t);
   }, [room?.status]);
 
@@ -614,7 +616,7 @@ export function RoomApp({ code }: { code: string }) {
               )}
             </div>
             <div className="hud-tools">
-              {!isSpectator ? (
+              {!isSpectator && watchers.length > 0 ? (
                 <WatchersEye
                   watchers={watchers}
                   open={watchersOpen}
@@ -817,45 +819,6 @@ function nickTile(color: ColorId): { background: string; color: string } {
   };
 }
 
-function TurnTimer({ deadlineAt, durationMs }: { deadlineAt: number; durationMs: number }) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(id);
-  }, [deadlineAt]);
-
-  const leftMs = Math.max(0, deadlineAt - now);
-  const leftSec = Math.ceil(leftMs / 1000);
-  const frac = Math.max(0, Math.min(1, leftMs / durationMs));
-  const r = 42;
-  const c = 2 * Math.PI * r;
-
-  return (
-    <div className="timer">
-      <svg viewBox="0 0 96 96" aria-hidden="true">
-        <circle className="timer-track" cx="48" cy="48" r={r} />
-        <circle
-          className="timer-arc"
-          cx="48"
-          cy="48"
-          r={r}
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - frac)}
-          transform="rotate(-90 48 48)"
-        />
-      </svg>
-      <span className="timer-num">
-        {leftSec}
-        <small>s</small>
-      </span>
-      <span className="sr-only" aria-live="polite">
-        {leftSec}s
-      </span>
-    </div>
-  );
-}
-
 function useGlowFlash(signal: string | null) {
   const [flash, setFlash] = useState<string | null>(null);
   const prev = useRef<string | null>(null);
@@ -955,6 +918,7 @@ function WatchersEye({
   onClose: () => void;
 }) {
   const n = watchers.length;
+  if (n === 0) return null;
   return (
     <div className="watchers-wrap">
       <button
@@ -971,20 +935,16 @@ function WatchersEye({
         <>
           <button className="watchers-scrim" aria-label="Fechar" onClick={onClose} />
           <div className="watchers-balloon" role="dialog" aria-label="Quem assiste">
-            {n === 0 ? (
-              <p>Ninguém assistindo.</p>
-            ) : (
-              <ul>
-                {watchers.map((w) => (
-                  <li key={w.id}>
-                    <span className="turn-pen" style={{ color: COLOR_HEX[w.color] }}>
-                      <PenIcon size={18} />
-                    </span>
-                    {w.nick}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul>
+              {watchers.map((w) => (
+                <li key={w.id}>
+                  <span className="turn-pen" style={{ color: COLOR_HEX[w.color] }}>
+                    <PenIcon size={18} />
+                  </span>
+                  {w.nick}
+                </li>
+              ))}
+            </ul>
           </div>
         </>
       ) : null}

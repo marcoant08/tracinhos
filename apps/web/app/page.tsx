@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MAX_PLAYERS, TALL_GRID } from "@tracinhos/game";
 import {
+  CHALLENGE_TTL_MS,
   COLOR_HEX,
   COLOR_IDS,
   ERROR_MESSAGES,
@@ -15,6 +16,7 @@ import {
 import { ColorPicker } from "@/components/ColorPicker";
 import { PenIcon } from "@/components/Pen";
 import { Toast } from "@/components/Toast";
+import { TurnTimer } from "@/components/TurnTimer";
 import {
   clearOccupy,
   loadGridPref,
@@ -60,6 +62,7 @@ export default function HomePage() {
     accepted: null,
   });
   const [myLiveCodes, setMyLiveCodes] = useState<string[]>([]);
+  const [now, setNow] = useState(() => Date.now());
   const nickRef = useRef(nick);
   const colorRef = useRef(color);
   const colsRef = useRef(cols);
@@ -249,6 +252,14 @@ export default function HomePage() {
     router.push(`/sala/${data.session.roomCode}`);
   }
 
+  useEffect(() => {
+    if (!lobby.inbox) return;
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [lobby.inbox?.id]);
+
+  const inbox = lobby.inbox && lobby.inbox.expiresAt > now ? lobby.inbox : null;
+
   async function decline() {
     const token = loadPresence()?.presenceToken;
     if (!token || !lobby.inbox) return;
@@ -266,12 +277,13 @@ export default function HomePage() {
 
   return (
     <main className="page page-lobby">
-      {lobby.inbox ? (
+      {inbox ? (
         <div className="challenge-banner" role="status">
+          <TurnTimer deadlineAt={inbox.expiresAt} durationMs={CHALLENGE_TTL_MS} size={44} bare />
           <p>
-            <strong>{lobby.inbox.from.nick}</strong> te desafiou
+            <strong>{inbox.from.nick}</strong> te desafiou
             <small>
-              {lobby.inbox.cols}×{lobby.inbox.rows}
+              {inbox.cols}×{inbox.rows}
             </small>
           </p>
           <div className="challenge-actions">
@@ -293,7 +305,7 @@ export default function HomePage() {
           {lobby.online.length === 0 ? (
             <p className="empty-note">Ninguém online agora.</p>
           ) : (
-            <ul className="people-list">
+            <ul className={lobby.online.length > 5 ? "people-list home-scroll" : "people-list"}>
               {lobby.online.map((person) => {
                 const playing = person.status === "seated";
                 return (
@@ -328,7 +340,7 @@ export default function HomePage() {
           {lobby.live.length === 0 ? (
             <p className="empty-note">Nenhuma partida agora.</p>
           ) : (
-            <ul className="live-list">
+            <ul className={lobby.live.length > 5 ? "live-list home-scroll" : "live-list"}>
               {[...lobby.live]
                 .sort((a, b) => Number(myLiveCodes.includes(b.code)) - Number(myLiveCodes.includes(a.code)))
                 .map((live) => {
