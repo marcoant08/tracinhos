@@ -15,7 +15,7 @@ import {
   type Session,
 } from "@tracinhos/shared";
 import { RoomError } from "./errors";
-import { createSeatedRoom, listLiveRooms } from "./rooms";
+import { actorFromToken, createSeatedRoom, listLiveRooms, markSeatOffline } from "./rooms";
 import { loadJson, saveJson, withLock } from "./store";
 
 const PRESENCE_TTL_SECONDS = Math.ceil(PRESENCE_TTL_MS / 1000) + 5;
@@ -141,8 +141,19 @@ export async function getLobby(presenceToken?: string | null): Promise<LobbySnap
   };
 }
 
-export async function leavePresence(presenceToken: string): Promise<{ ok: true }> {
+export async function leavePresence(
+  presenceToken: string,
+  seated?: { roomCode: string; seatToken: string } | null,
+): Promise<{ ok: true }> {
   const token = presenceToken.trim();
+  if (seated?.roomCode && seated.seatToken) {
+    try {
+      const playerId = await actorFromToken(seated.roomCode, seated.seatToken);
+      await markSeatOffline(seated.roomCode, playerId);
+    } catch {
+      /* sala sumida ou token velho */
+    }
+  }
   if (!token) return { ok: true };
   const presence = await loadPresenceByToken(token);
   if (!presence) return { ok: true };

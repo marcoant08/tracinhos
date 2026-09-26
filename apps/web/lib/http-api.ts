@@ -64,7 +64,16 @@ export async function handleRest(
 
     if (req.method === "POST" && pathname === "/api/presence/leave") {
       const body = await readJson(req);
-      return send(res, 200, await leavePresence(asString(body.presenceToken)));
+      const roomCode = asString(body.roomCode);
+      const seatToken = asString(body.seatToken);
+      return send(
+        res,
+        200,
+        await leavePresence(
+          asString(body.presenceToken),
+          roomCode && seatToken ? { roomCode, seatToken } : null,
+        ),
+      );
     }
 
     if (req.method === "POST" && pathname === "/api/challenges") {

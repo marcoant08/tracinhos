@@ -6,18 +6,30 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   return handle(async () => {
     let presenceToken = "";
+    let roomCode = "";
+    let seatToken = "";
     const contentType = request.headers.get("content-type") ?? "";
+    const readBody = (raw: { presenceToken?: string; roomCode?: string; seatToken?: string }) => {
+      presenceToken = raw.presenceToken ?? "";
+      roomCode = raw.roomCode ?? "";
+      seatToken = raw.seatToken ?? "";
+    };
     if (contentType.includes("application/json")) {
-      const body = (await request.json()) as { presenceToken?: string };
-      presenceToken = body.presenceToken ?? "";
+      readBody((await request.json()) as { presenceToken?: string; roomCode?: string; seatToken?: string });
     } else {
       const text = await request.text();
       try {
-        presenceToken = ((JSON.parse(text) as { presenceToken?: string }).presenceToken ?? "").toString();
+        readBody(JSON.parse(text) as { presenceToken?: string; roomCode?: string; seatToken?: string });
       } catch {
-        presenceToken = new URLSearchParams(text).get("presenceToken") ?? "";
+        const params = new URLSearchParams(text);
+        presenceToken = params.get("presenceToken") ?? "";
+        roomCode = params.get("roomCode") ?? "";
+        seatToken = params.get("seatToken") ?? "";
       }
     }
-    return leavePresence(presenceToken);
+    return leavePresence(
+      presenceToken,
+      roomCode && seatToken ? { roomCode, seatToken } : null,
+    );
   });
 }

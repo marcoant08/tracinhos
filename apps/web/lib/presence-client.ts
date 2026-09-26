@@ -47,10 +47,14 @@ export async function heartbeatPresence(input: {
   return null;
 }
 
-export function leavePresenceNow() {
+export function leavePresenceNow(seated?: { roomCode: string; seatToken: string } | null) {
   const token = loadPresence()?.presenceToken;
-  if (!token) return;
-  const body = JSON.stringify({ presenceToken: token });
+  if (!token && !seated?.seatToken) return;
+  const body = JSON.stringify({
+    presenceToken: token ?? "",
+    roomCode: seated?.roomCode ?? "",
+    seatToken: seated?.seatToken ?? "",
+  });
   if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
     navigator.sendBeacon("/api/presence/leave", new Blob([body], { type: "application/json" }));
     return;

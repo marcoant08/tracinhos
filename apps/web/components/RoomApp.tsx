@@ -368,10 +368,19 @@ export function RoomApp({ code }: { code: string }) {
 
     void beat();
     const id = setInterval(() => void beat(), PRESENCE_POLL_MS);
-    const onPageHide = () => leavePresenceNow();
+    const leaveSeat = () => {
+      const seat = loadSession(roomCode);
+      leavePresenceNow(seat ? { roomCode, seatToken: seat.seatToken } : null);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") leaveSeat();
+    };
+    const onPageHide = () => leaveSeat();
+    document.addEventListener("visibilitychange", onVis);
     window.addEventListener("pagehide", onPageHide);
     return () => {
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [elsewhere, room === null, room?.status, room?.code, session?.seatToken, session?.nick, session?.color, watch?.watchToken, watch?.nick, watch?.color, nick, color]);
@@ -407,6 +416,28 @@ export function RoomApp({ code }: { code: string }) {
       return next.length === prev.length ? prev : next;
     });
   }, [room]);
+
+  const linkSeen = useRef(new Map<string, boolean>());
+  useEffect(() => {
+    if (!room || room.status === "finished") return;
+    const mine = session?.playerId;
+    for (const player of room.players) {
+      if (player.kind !== "remote" || player.id === mine) continue;
+      const was = linkSeen.current.get(player.id);
+      if (was === true && !player.connected) {
+        toastMs.current = 2800;
+        setToast(`${player.nick} perdeu a conexão`);
+      } else if (was === false && player.connected) {
+        toastMs.current = 2200;
+        setToast(`${player.nick} voltou`);
+      }
+      linkSeen.current.set(player.id, player.connected);
+    }
+    const live = new Set(room.players.map((p) => p.id));
+    for (const id of [...linkSeen.current.keys()]) {
+      if (!live.has(id)) linkSeen.current.delete(id);
+    }
+  }, [room, session?.playerId]);
 
   const turnPlayer = room?.status === "playing"
     ? room.players.find((p) => p.id === room.game?.playerIds[room.game.currentPlayerIndex])
@@ -566,7 +597,10 @@ export function RoomApp({ code }: { code: string }) {
       <main className="page">
         <RoomCodeBlock code={room.code} count={room.players.length} onCopyCode={() => void copyCode()} />
         <p className="lede">
-          Já na sala: {room.players.map((p) => p.nick).join(", ") || "ninguém ainda"}
+          Já na sala:{" "}
+          {room.players
+            .map((p) => (remoteOffline(p) ? `${p.nick} (sem conexão)` : p.nick))
+            .join(", ") || "ninguém ainda"}
         </p>
         <section className="stage">
           <h2>{watching ? "Assistir" : "Entrar"}</h2>
@@ -592,6 +626,7 @@ export function RoomApp({ code }: { code: string }) {
   }
 
   const isHost = Boolean(session && session.playerId === room.hostPlayerId);
+  const hostOffline = remoteOffline(room.players.find((p) => p.id === room.hostPlayerId));
   const starterPlayer =
     room.starterPlayerId ? room.players.find((p) => p.id === room.starterPlayerId) : undefined;
   const starterValue = starterPlayer?.id ?? "";
@@ -730,10 +765,15 @@ export function RoomApp({ code }: { code: string }) {
         </div>
         <ul className="list">
           {room.players.map((p) => (
-            <li key={p.id} style={nickTile(p.color)}>
+            <li
+              key={p.id}
+              className={remoteOffline(p) && p.id !== session?.playerId ? "is-offline" : undefined}
+              style={nickTile(p.color)}
+            >
               <span className="list-nick">
                 {p.nick}
                 {playerSuffix(p, room.hostPlayerId)}
+                {remoteOffline(p) && p.id !== session?.playerId ? " · sem conexão" : ""}
               </span>
               {canRemovePlayer(room, session, p) ? (
                 <button
@@ -777,11 +817,11 @@ export function RoomApp({ code }: { code: string }) {
                 Começar
               </button>
             ) : (
-              <p className="waiting">Esperando o host…</p>
+              <p className="waiting">{hostOffline ? "O host está sem conexão…" : "Esperando o host…"}</p>
             )}
           </>
         ) : (
-          <p className="waiting">Esperando o host…</p>
+          <p className="waiting">{hostOffline ? "O host está sem conexão…" : "Esperando o host…"}</p>
         )}
       </section>
       <AddLocalSheet
@@ -817,7 +857,13 @@ function ScoreList({ room, currentId }: { room: PublicRoom; currentId?: string }
         const squares = room.game?.scores[p.id] ?? 0;
         const lines = strokes[p.id] ?? 0;
         return (
-          <div key={p.id} className="score-row" style={nickTile(p.color)} aria-current={isTurn ? "true" : undefined}>
+          <div
+            key={p.id}
+            className={`score-row${remoteOffline(p) ? " is-offline" : ""}`}
+            style={nickTile(p.color)}
+            aria-current={isTurn ? "true" : undefined}
+            aria-label={remoteOffline(p) ? `${p.nick}, sem conexão` : undefined}
+          >
             <span className="score-nick">
               <span className="score-nick-text">{p.nick}</span>
               {isTurn ? (
@@ -1034,6 +1080,10 @@ function canActForCurrent(room: PublicRoom, session: Session | null): boolean {
   const current = room.players.find((p) => p.id === currentId);
   if (!current) return false;
   return current.id === session.playerId || (current.kind === "local" && current.ownerPlayerId === session.playerId);
+}
+
+function remoteOffline(player: PublicPlayer | undefined): boolean {
+  return Boolean(player && player.kind === "remote" && !player.connected);
 }
 
 function playerSuffix(player: PublicPlayer, hostPlayerId: string): string {

@@ -16,6 +16,8 @@ import {
   DISCONNECT_TO_BOT_MS,
   LIVE_LIST_MAX,
   MAX_WATCHERS,
+  PRESENCE_POLL_MS,
+  PRESENCE_TTL_MS,
   ROOM_CODE_ALPHABET,
   ROOM_TTL_SECONDS,
   TURN_TIMEOUT_MS,
@@ -46,6 +48,7 @@ export type Seat = {
   ownerPlayerId: string | null;
   connected: boolean;
   disconnectedAt: number | null;
+  seenAt: number;
   wsEpoch: number;
 };
 
@@ -129,11 +132,14 @@ export async function getPublicRoom(
       actorId = undefined;
     }
   }
-  const peek = sweep(await mustRoom(code));
+  const loaded = await mustRoom(code);
+  const needsExpire = hasStaleRemote(loaded);
+  const needsHeartbeat = Boolean(actorId && seatHeartbeatDue(loaded, actorId));
+  const peek = sweep(loaded);
   const watchersRemoved = sweepWatchers(peek);
   const watcher = watchToken ? watcherFromToken(peek, watchToken) : null;
   const needsTouch = Boolean(actorId && seatNeedsTouch(peek, actorId));
-  if (!needsTouch && !isTurnOverdue(peek) && !watchersRemoved) {
+  if (!needsTouch && !isTurnOverdue(peek) && !watchersRemoved && !needsExpire && !needsHeartbeat) {
     if (watcher) {
       watcher.seenAt = Date.now();
       await saveRoom(peek);
@@ -194,6 +200,7 @@ export async function createRoom(input: {
         ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
+        seenAt: Date.now(),
         wsEpoch: 1,
       },
     ],
@@ -229,6 +236,7 @@ export async function joinRoom(
       ownerPlayerId: null,
       connected: true,
       disconnectedAt: null,
+      seenAt: Date.now(),
       wsEpoch: 1,
     });
     await saveSeat(seatToken, room.code, playerId);
@@ -262,6 +270,7 @@ export async function resumeRoom(
     player.kind = "remote";
     player.connected = true;
     player.disconnectedAt = null;
+    player.seenAt = Date.now();
     player.wsEpoch = (player.wsEpoch ?? 0) + 1;
     return { playerId: player.id, wsEpoch: player.wsEpoch };
   });
@@ -384,6 +393,7 @@ export async function createSeatedRoom(input: {
         ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
+        seenAt: now,
         wsEpoch: 1,
       },
       {
@@ -394,6 +404,7 @@ export async function createSeatedRoom(input: {
         ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
+        seenAt: now,
         wsEpoch: 1,
       },
     ],
@@ -451,6 +462,7 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
       ownerPlayerId: null,
       connected: true,
       disconnectedAt: null,
+      seenAt: Date.now(),
       wsEpoch: 0,
     });
     return {};
@@ -480,6 +492,7 @@ export async function addLocal(
       ownerPlayerId: actorId,
       connected: actor.connected,
       disconnectedAt: null,
+      seenAt: Date.now(),
       wsEpoch: 0,
     });
     return {};
@@ -608,8 +621,22 @@ export async function markDisconnected(
       const player = room.players.find((p) => p.id === playerId);
       if (!player || player.kind !== "remote") return {};
       if (player.wsEpoch !== wsEpoch) return {};
-      player.connected = false;
-      player.disconnectedAt = Date.now();
+      markRemoteOffline(player);
+      return {};
+    });
+    return result.room;
+  } catch (error) {
+    if (error instanceof RoomError && error.code === "room_not_found") return null;
+    throw error;
+  }
+}
+
+export async function markSeatOffline(code: string, playerId: string): Promise<PublicRoom | null> {
+  try {
+    const result = await mutate(code, async (room) => {
+      const player = room.players.find((p) => p.id === playerId);
+      if (!player || player.kind !== "remote" || !player.connected) return {};
+      markRemoteOffline(player);
       return {};
     });
     return result.room;
@@ -731,6 +758,7 @@ function hydrateRoom(room: Room & { size?: number }): Room {
         ...p,
         kind,
         ownerPlayerId: kind === "local" ? p.ownerPlayerId ?? null : null,
+        seenAt: typeof p.seenAt === "number" ? p.seenAt : Date.now(),
         wsEpoch: typeof p.wsEpoch === "number" ? p.wsEpoch : 0,
       };
     }),
@@ -844,8 +872,47 @@ function sweepWatchers(room: Room): boolean {
   return true;
 }
 
+function markRemoteOffline(player: Seat) {
+  player.connected = false;
+  player.disconnectedAt = Date.now();
+}
+
+function seatSeenAt(player: Seat, fallback: number): number {
+  return typeof player.seenAt === "number" ? player.seenAt : fallback;
+}
+
+function hasStaleRemote(room: Room): boolean {
+  const now = Date.now();
+  return room.players.some(
+    (player) =>
+      player.kind === "remote" &&
+      player.connected &&
+      now - seatSeenAt(player, now) >= PRESENCE_TTL_MS,
+  );
+}
+
+function seatHeartbeatDue(room: Room, playerId: string): boolean {
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player || player.kind === "local") return false;
+  return Date.now() - seatSeenAt(player, 0) >= PRESENCE_POLL_MS;
+}
+
+function expireStaleRemotes(room: Room): boolean {
+  const now = Date.now();
+  let changed = false;
+  for (const player of room.players) {
+    if (player.kind !== "remote" || !player.connected) continue;
+    if (now - seatSeenAt(player, now) >= PRESENCE_TTL_MS) {
+      markRemoteOffline(player);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function sweep(room: Room): Room {
   const now = Date.now();
+  expireStaleRemotes(room);
   const promoted: string[] = [];
   for (const player of room.players) {
     if (
@@ -923,6 +990,7 @@ function touchSeat(room: Room, playerId: string): boolean {
   player.kind = "remote";
   player.connected = true;
   player.disconnectedAt = null;
+  player.seenAt = Date.now();
   return changed;
 }
 

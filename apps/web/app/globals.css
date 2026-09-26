@@ -306,12 +306,14 @@ input::placeholder {
 
 .colors {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: stretch;
   gap: 8px;
 }
 
 .color {
   width: 100%;
+  min-width: 0;
   height: 58px;
   border-radius: 16px;
   border: 3px solid transparent;
@@ -321,6 +323,7 @@ input::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.12s ease;
 }
 
@@ -1367,6 +1370,11 @@ input::placeholder {
   font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.list li.is-offline,
+.score-row.is-offline {
+  opacity: 0.55;
 }
 
 .list-nick {
