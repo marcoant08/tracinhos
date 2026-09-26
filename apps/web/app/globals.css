@@ -1022,6 +1022,79 @@ input::placeholder {
   color: var(--muted);
 }
 
+.list-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-skel-row,
+.list-skel-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: list-skel-pulse 1.15s ease-in-out infinite;
+}
+
+.list-skel-row {
+  min-height: 44px;
+}
+
+.list-skel-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-2);
+}
+
+.list-skel-dot {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.list-skel-bar {
+  height: 12px;
+  flex: 1 1 auto;
+  max-width: 140px;
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.list-skel-bar-wide {
+  max-width: 72%;
+}
+
+.list-skel-bar-meta {
+  max-width: 40%;
+  height: 10px;
+  background: #2a4a92;
+}
+
+.list-skel-chip {
+  width: 88px;
+  height: 36px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border-radius: 16px;
+  background: var(--bg-2);
+}
+
+@keyframes list-skel-pulse {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
 .people-list,
 .live-list {
   list-style: none;
@@ -1648,7 +1721,9 @@ input::placeholder {
   .color[data-drawing="true"] .color-pen,
   .color[data-returning="true"] .color-stroke,
   .color[data-returning="true"] .color-pen,
-  .edge-grow {
+  .edge-grow,
+  .list-skel-row,
+  .list-skel-card {
     animation: none;
     transition: none;
   }

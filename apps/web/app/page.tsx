@@ -61,6 +61,7 @@ export default function HomePage() {
     outgoing: null,
     accepted: null,
   });
+  const [listsReady, setListsReady] = useState(false);
   const [myLiveCodes, setMyLiveCodes] = useState<string[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const nickRef = useRef(nick);
@@ -115,15 +116,20 @@ export default function HomePage() {
         }).catch(() => null);
 
         const next = await fetchLobby(pingData?.presenceToken);
-        if (!next || stopped) return;
+        if (stopped) return;
+        if (!next) {
+          setListsReady(true);
+          return;
+        }
         if (next.accepted) {
           saveSession(next.accepted.session);
           router.push(`/sala/${next.accepted.roomCode}`);
           return;
         }
         setLobby(next);
+        setListsReady(true);
       } catch {
-        /* rede */
+        setListsReady(true);
       }
     }
 
@@ -300,9 +306,11 @@ export default function HomePage() {
       <p className="lede">Ligue os pontos. Feche o quadrado. Jogue de novo.</p>
 
       <div className="home-lists">
-        <section className="home-list">
+        <section className="home-list" aria-busy={!listsReady}>
           <h2>Online</h2>
-          {lobby.online.length === 0 ? (
+          {!listsReady ? (
+            <HomeListSkeleton kind="online" />
+          ) : lobby.online.length === 0 ? (
             <p className="empty-note">Ninguém online agora.</p>
           ) : (
             <ul className={lobby.online.length > 5 ? "people-list home-scroll" : "people-list"}>
@@ -335,9 +343,11 @@ export default function HomePage() {
           )}
         </section>
 
-        <section className="home-list">
+        <section className="home-list" aria-busy={!listsReady}>
           <h2>Ao vivo</h2>
-          {lobby.live.length === 0 ? (
+          {!listsReady ? (
+            <HomeListSkeleton kind="live" />
+          ) : lobby.live.length === 0 ? (
             <p className="empty-note">Nenhuma partida agora.</p>
           ) : (
             <ul className={lobby.live.length > 5 ? "live-list home-scroll" : "live-list"}>
@@ -445,5 +455,28 @@ export default function HomePage() {
       </section>
       <Toast message={toast} />
     </main>
+  );
+}
+
+function HomeListSkeleton({ kind }: { kind: "online" | "live" }) {
+  const label = kind === "online" ? "Carregando quem está online" : "Carregando partidas ao vivo";
+  return (
+    <div className={`list-skel list-skel-${kind}`} role="status" aria-live="polite" aria-label={label}>
+      <p className="sr-only">{label}…</p>
+      {Array.from({ length: 2 }, (_, i) =>
+        kind === "online" ? (
+          <div key={i} className="list-skel-row" style={{ animationDelay: `${i * 120}ms` }}>
+            <span className="list-skel-dot" />
+            <span className="list-skel-bar" />
+            <span className="list-skel-chip" />
+          </div>
+        ) : (
+          <div key={i} className="list-skel-card" style={{ animationDelay: `${i * 120}ms` }}>
+            <span className="list-skel-bar list-skel-bar-wide" />
+            <span className="list-skel-bar list-skel-bar-meta" />
+          </div>
+        ),
+      )}
+    </div>
   );
 }
