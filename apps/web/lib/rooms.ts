@@ -43,6 +43,7 @@ export type Seat = {
   nick: string;
   color: ColorId;
   kind: PlayerKind;
+  ownerPlayerId: string | null;
   connected: boolean;
   disconnectedAt: number | null;
   wsEpoch: number;
@@ -72,6 +73,7 @@ export type Room = {
 };
 
 export function toPublic(room: Room): PublicRoom {
+  syncLocalPresence(room);
   return {
     code: room.code,
     cols: room.cols,
@@ -84,6 +86,7 @@ export function toPublic(room: Room): PublicRoom {
       color: p.color,
       kind: p.kind,
       connected: p.connected,
+      ...(p.kind === "local" && p.ownerPlayerId ? { ownerPlayerId: p.ownerPlayerId } : {}),
     })),
     watchers: room.watchers.map((w) => ({
       id: w.id,
@@ -187,7 +190,8 @@ export async function createRoom(input: {
         id: playerId,
         nick,
         color,
-        kind: "human",
+        kind: "remote",
+        ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
         wsEpoch: 1,
@@ -221,7 +225,8 @@ export async function joinRoom(
       id: playerId,
       nick,
       color,
-      kind: "human",
+      kind: "remote",
+      ownerPlayerId: null,
       connected: true,
       disconnectedAt: null,
       wsEpoch: 1,
@@ -254,7 +259,7 @@ export async function resumeRoom(
   const publicRoom = await mutate(code, async (room) => {
     const player = room.players.find((p) => p.id === seat.playerId);
     if (!player) throw new RoomError("invalid_token");
-    player.kind = "human";
+    player.kind = "remote";
     player.connected = true;
     player.disconnectedAt = null;
     player.wsEpoch = (player.wsEpoch ?? 0) + 1;
@@ -375,7 +380,8 @@ export async function createSeatedRoom(input: {
         id: hostId,
         nick: hostNick,
         color: hostColor,
-        kind: "human",
+        kind: "remote",
+        ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
         wsEpoch: 1,
@@ -384,7 +390,8 @@ export async function createSeatedRoom(input: {
         id: guestId,
         nick: guestNick,
         color: guestColor,
-        kind: "human",
+        kind: "remote",
+        ownerPlayerId: null,
         connected: true,
         disconnectedAt: null,
         wsEpoch: 1,
@@ -441,7 +448,37 @@ export async function addBot(code: string, actorId: string): Promise<PublicRoom>
       nick,
       color,
       kind: "bot",
+      ownerPlayerId: null,
       connected: true,
+      disconnectedAt: null,
+      wsEpoch: 0,
+    });
+    return {};
+  });
+  return result.room;
+}
+
+export async function addLocal(
+  code: string,
+  actorId: string,
+  nickInput: string,
+  colorInput: string,
+): Promise<PublicRoom> {
+  const result = await mutate(code, async (room) => {
+    if (room.status !== "lobby") throw new RoomError("game_already_started");
+    const actor = room.players.find((p) => p.id === actorId);
+    if (!actor || actor.kind !== "remote") throw new RoomError("not_in_room");
+    if (room.players.length >= MAX_PLAYERS) throw new RoomError("room_full");
+    const nick = parseNick(nickInput);
+    const color = parseColor(colorInput);
+    assertIdentityFree(room, nick, color);
+    room.players.push({
+      id: randomUUID(),
+      nick,
+      color,
+      kind: "local",
+      ownerPlayerId: actorId,
+      connected: actor.connected,
       disconnectedAt: null,
       wsEpoch: 0,
     });
@@ -457,10 +494,13 @@ export async function removePlayer(
 ): Promise<PublicRoom> {
   const result = await mutate(code, async (room) => {
     if (room.status !== "lobby") throw new RoomError("game_already_started");
-    if (room.hostPlayerId !== actorId) throw new RoomError("not_host");
-    if (playerId === room.hostPlayerId || playerId === actorId) throw new RoomError("not_in_room");
+    if (playerId === actorId || playerId === room.hostPlayerId) throw new RoomError("not_in_room");
     const index = room.players.findIndex((p) => p.id === playerId);
     if (index < 0) throw new RoomError("not_in_room");
+    const target = room.players[index]!;
+    const isHost = room.hostPlayerId === actorId;
+    const ownsLocal = target.kind === "local" && target.ownerPlayerId === actorId;
+    if (!isHost && !ownsLocal) throw new RoomError("not_host");
     room.players.splice(index, 1);
     if (room.starterPlayerId === playerId) room.starterPlayerId = null;
     await clearSeatForPlayer(room.code, playerId);
@@ -540,8 +580,10 @@ export async function drawEdge(
     }
     const timedOut = expireIfNeeded(room);
     if (timedOut) return { skipped: true, timedOut };
+    const current = currentSeat(room);
+    if (!current || !canPlayAs(actorId, current)) throw new RoomError("not_your_turn");
     try {
-      room.game = applyMove(room.game, actorId, edge).state;
+      room.game = applyMove(room.game, current.id, edge).state;
     } catch (error) {
       const codeName = (error as { code?: string }).code;
       if (codeName === "not_your_turn") throw new RoomError("not_your_turn");
@@ -564,7 +606,7 @@ export async function markDisconnected(
   try {
     const result = await mutate(code, async (room) => {
       const player = room.players.find((p) => p.id === playerId);
-      if (!player || player.kind === "bot") return {};
+      if (!player || player.kind !== "remote") return {};
       if (player.wsEpoch !== wsEpoch) return {};
       player.connected = false;
       player.disconnectedAt = Date.now();
@@ -585,13 +627,14 @@ export async function promoteDisconnectedToBot(
   try {
     const room = await mustRoom(code);
     const player = room.players.find((p) => p.id === playerId);
-    if (!player || player.kind === "bot" || player.connected || player.wsEpoch !== wsEpoch) {
+    if (!player || player.kind !== "remote" || player.connected || player.wsEpoch !== wsEpoch) {
       return toPublic(room);
     }
     const result = await mutate(code, async (next) => {
       const seat = next.players.find((p) => p.id === playerId);
-      if (!seat || seat.kind === "bot" || seat.connected || seat.wsEpoch !== wsEpoch) return {};
+      if (!seat || seat.kind !== "remote" || seat.connected || seat.wsEpoch !== wsEpoch) return {};
       seat.kind = "bot";
+      convertOwnerLocalsToBots(next, playerId);
       refreshTurnDeadline(next);
       return {};
     });
@@ -682,10 +725,15 @@ function hydrateRoom(room: Room & { size?: number }): Room {
     ...withGrid,
     starterPlayerId: withGrid.starterPlayerId ?? null,
     watchers: Array.isArray(withGrid.watchers) ? withGrid.watchers : [],
-    players: withGrid.players.map((p) => ({
-      ...p,
-      wsEpoch: typeof p.wsEpoch === "number" ? p.wsEpoch : 0,
-    })),
+    players: withGrid.players.map((p) => {
+      const kind = normalizeKind(p.kind);
+      return {
+        ...p,
+        kind,
+        ownerPlayerId: kind === "local" ? p.ownerPlayerId ?? null : null,
+        wsEpoch: typeof p.wsEpoch === "number" ? p.wsEpoch : 0,
+      };
+    }),
   };
 }
 
@@ -798,16 +846,20 @@ function sweepWatchers(room: Room): boolean {
 
 function sweep(room: Room): Room {
   const now = Date.now();
+  const promoted: string[] = [];
   for (const player of room.players) {
     if (
-      player.kind === "human" &&
+      player.kind === "remote" &&
       !player.connected &&
       player.disconnectedAt &&
       now - player.disconnectedAt >= DISCONNECT_TO_BOT_MS
     ) {
       player.kind = "bot";
+      promoted.push(player.id);
     }
   }
+  for (const ownerId of promoted) convertOwnerLocalsToBots(room, ownerId);
+  syncLocalPresence(room);
   sweepWatchers(room);
   return room;
 }
@@ -860,15 +912,15 @@ async function loadWatchToken(token: string): Promise<{ roomCode: string; watche
 
 function seatNeedsTouch(room: Room, playerId: string): boolean {
   const player = room.players.find((p) => p.id === playerId);
-  if (!player) return false;
-  return player.kind !== "human" || !player.connected || player.disconnectedAt !== null;
+  if (!player || player.kind === "local") return false;
+  return player.kind !== "remote" || !player.connected || player.disconnectedAt !== null;
 }
 
 function touchSeat(room: Room, playerId: string): boolean {
   const player = room.players.find((p) => p.id === playerId);
-  if (!player) return false;
+  if (!player || player.kind === "local") return false;
   const changed = seatNeedsTouch(room, playerId);
-  player.kind = "human";
+  player.kind = "remote";
   player.connected = true;
   player.disconnectedAt = null;
   return changed;
@@ -877,6 +929,36 @@ function touchSeat(room: Room, playerId: string): boolean {
 const botTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const turnSkipTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const skipGens = new Map<string, number>();
+
+function normalizeKind(kind: string | undefined): PlayerKind {
+  if (kind === "local" || kind === "bot" || kind === "remote") return kind;
+  return "remote";
+}
+
+function isTimedHuman(kind: PlayerKind): boolean {
+  return kind === "remote" || kind === "local";
+}
+
+function canPlayAs(actorId: string, current: Seat): boolean {
+  return current.id === actorId || (current.kind === "local" && current.ownerPlayerId === actorId);
+}
+
+function convertOwnerLocalsToBots(room: Room, ownerId: string) {
+  for (const player of room.players) {
+    if (player.kind === "local" && player.ownerPlayerId === ownerId) {
+      player.kind = "bot";
+      player.ownerPlayerId = null;
+    }
+  }
+}
+
+function syncLocalPresence(room: Room) {
+  for (const player of room.players) {
+    if (player.kind !== "local") continue;
+    const owner = room.players.find((p) => p.id === player.ownerPlayerId);
+    player.connected = Boolean(owner && owner.kind === "remote" && owner.connected);
+  }
+}
 
 function currentSeat(room: Room): Seat | null {
   if (room.status !== "playing" || !room.game || room.game.status !== "playing") {
@@ -888,7 +970,7 @@ function currentSeat(room: Room): Seat | null {
 
 function refreshTurnDeadline(room: Room) {
   const seat = currentSeat(room);
-  if (seat?.kind === "human") {
+  if (seat && isTimedHuman(seat.kind)) {
     room.turnDeadlineAt = Date.now() + TURN_TIMEOUT_MS;
   } else if (seat?.kind === "bot") {
     room.turnDeadlineAt = Date.now() + BOT_THINK_MS;
@@ -926,7 +1008,7 @@ function advanceOverdueTurn(room: Room): { playerId: string; nick: string } | nu
 function expireIfNeeded(room: Room): { playerId: string; nick: string } | null {
   if (!room.turnDeadlineAt || Date.now() < room.turnDeadlineAt) return null;
   const seat = currentSeat(room);
-  if (!seat || seat.kind !== "human" || !room.game) return null;
+  if (!seat || !isTimedHuman(seat.kind) || !room.game) return null;
   room.game = applyMove(room.game, seat.id, pickRandomMove(room.game, Math.random)).state;
   if (room.game.status === "finished") room.status = "finished";
   refreshTurnDeadline(room);
@@ -981,7 +1063,7 @@ function scheduleTurnSkip(code: string, room: PublicRoom) {
   if (!room.turnDeadlineAt || room.status !== "playing") return;
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
-  if (current?.kind !== "human") return;
+  if (!current || !isTimedHuman(current.kind)) return;
   const wait = Math.max(0, room.turnDeadlineAt - Date.now());
   turnSkipTimers.set(
     code,

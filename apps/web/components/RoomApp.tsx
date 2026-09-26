@@ -11,13 +11,16 @@ import {
   PRESENCE_POLL_MS,
   RESULT_HOLD_MS,
   TURN_TIMEOUT_MS,
+  COLOR_IDS,
   isValidNick,
   type ColorId,
+  type PublicPlayer,
   type PublicRoom,
   type Session,
   type WatchSession,
 } from "@tracinhos/shared";
 import { Board } from "./Board";
+import { CloseIcon } from "./CloseIcon";
 import { ColorPicker } from "./ColorPicker";
 import { HelpButton } from "./HelpButton";
 import { ScoreSquare, ScoreStroke } from "./Marks";
@@ -37,6 +40,7 @@ import {
   saveWatch,
 } from "@/lib/session";
 import { heartbeatPresence, leavePresenceNow } from "@/lib/presence-client";
+import { useSheetPresence } from "@/lib/use-sheet-presence";
 
 export function RoomApp({ code }: { code: string }) {
   const roomCode = code.toUpperCase();
@@ -49,6 +53,7 @@ export function RoomApp({ code }: { code: string }) {
   const [toast, setToast] = useState<string | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{ id: string; nick: string } | null>(null);
+  const [addingLocal, setAddingLocal] = useState(false);
   const [wsDown, setWsDown] = useState(false);
   const kickedRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -409,10 +414,10 @@ export function RoomApp({ code }: { code: string }) {
   const glowSignal = boardGlow({
     status: room?.status ?? "lobby",
     myTurn: Boolean(
-      room &&
-        session &&
-        room.status === "playing" &&
-        room.game?.playerIds[room.game.currentPlayerIndex] === session.playerId,
+      session &&
+        turnPlayer &&
+        (turnPlayer.id === session.playerId ||
+          (turnPlayer.kind === "local" && turnPlayer.ownerPlayerId === session.playerId)),
     ),
     currentKind: turnPlayer?.kind,
     deadlineAt: room?.turnDeadlineAt ?? null,
@@ -443,6 +448,32 @@ export function RoomApp({ code }: { code: string }) {
     saveIdentity({ nick: data.session.nick, color: data.session.color });
     setSession(data.session);
     setRoom(data.room);
+  }
+
+  async function submitAddLocal(nextNick: string, nextColor: ColorId) {
+    const token = loadSession(roomCode)?.seatToken;
+    if (!token) {
+      send({ type: "room:addLocal", nick: nextNick, color: nextColor });
+      setAddingLocal(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/rooms/${roomCode}/local`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatToken: token, nick: nextNick, color: nextColor }),
+      });
+      const data = (await res.json()) as { room?: PublicRoom; message?: string; error?: string };
+      if (!res.ok || !data.room) {
+        setToast(data.message ?? ERROR_MESSAGES[(data.error as keyof typeof ERROR_MESSAGES) ?? "invalid_nick"]);
+        return;
+      }
+      setRoom((prev) => preferRoom(prev, data.room!));
+      setAddingLocal(false);
+    } catch {
+      send({ type: "room:addLocal", nick: nextNick, color: nextColor });
+      setAddingLocal(false);
+    }
   }
 
   async function startWatch() {
@@ -564,17 +595,18 @@ export function RoomApp({ code }: { code: string }) {
   const starterPlayer =
     room.starterPlayerId ? room.players.find((p) => p.id === room.starterPlayerId) : undefined;
   const starterValue = starterPlayer?.id ?? "";
-  const viewRoom = session ? withPendingMoves(room, session.playerId, pendingEdges) : room;
+  const actingId = session ? actingPlayerId(room, session.playerId) : null;
+  const viewRoom = actingId ? withPendingMoves(room, actingId, pendingEdges) : room;
   const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
   const current = room.players.find((p) => p.id === currentId);
-  const serverMyTurn = Boolean(session && room.status === "playing" && currentId === session.playerId);
-  const localMyTurn = Boolean(
-    session &&
-      viewRoom.game?.status === "playing" &&
-      viewRoom.game.playerIds[viewRoom.game.currentPlayerIndex] === session.playerId,
+  const serverCanAct = canActForCurrent(room, session);
+  const localCanAct = canActForCurrent(viewRoom, session);
+  const ownRemoteTurn = Boolean(session && current && current.id === session.playerId);
+  const passPhone = Boolean(
+    session && current?.kind === "local" && current.ownerPlayerId === session.playerId,
   );
-  const myTurn = !isSpectator && (serverMyTurn || localMyTurn);
-  const canDraw = !isSpectator && (localMyTurn || (serverMyTurn && pendingEdges.length === 0));
+  const myTurn = !isSpectator && ownRemoteTurn;
+  const canDraw = !isSpectator && (localCanAct || (serverCanAct && pendingEdges.length === 0));
   const showBoard = room.status === "playing" || (room.status === "finished" && holdingBoard);
   const timerMs = current?.kind === "bot" ? BOT_THINK_MS : TURN_TIMEOUT_MS;
 
@@ -611,7 +643,11 @@ export function RoomApp({ code }: { code: string }) {
               ) : (
                 <span>
                   Vez de {current?.nick ?? "…"}
-                  {current?.kind === "bot" ? <small className="hint">pensando…</small> : null}
+                  {passPhone ? (
+                    <small className="hint">Passe o celular</small>
+                  ) : current?.kind === "bot" ? (
+                    <small className="hint">pensando…</small>
+                  ) : null}
                 </span>
               )}
             </div>
@@ -697,54 +733,75 @@ export function RoomApp({ code }: { code: string }) {
             <li key={p.id} style={nickTile(p.color)}>
               <span className="list-nick">
                 {p.nick}
-                {p.id === room.hostPlayerId ? " · host" : ""}
-                {p.kind === "bot" ? " · bot" : ""}
+                {playerSuffix(p, room.hostPlayerId)}
               </span>
-              {isHost && p.id !== room.hostPlayerId ? (
+              {canRemovePlayer(room, session, p) ? (
                 <button
                   type="button"
                   className="list-remove"
                   aria-label={`Remover ${p.nick}`}
                   onClick={() => setPendingRemove({ id: p.id, nick: p.nick })}
                 >
-                  Remover
+                  <RemoveIcon />
                 </button>
               ) : null}
             </li>
           ))}
         </ul>
-        {isHost ? (
+        {session ? (
           <>
+            {isHost ? (
+              <button
+                className="btn ghost"
+                style={{ marginBottom: 10 }}
+                disabled={room.players.length >= MAX_PLAYERS}
+                onClick={() => send({ type: "room:addBot" })}
+              >
+                Adicionar bot
+              </button>
+            ) : null}
             <button
               className="btn ghost"
               style={{ marginBottom: 10 }}
               disabled={room.players.length >= MAX_PLAYERS}
-              onClick={() => send({ type: "room:addBot" })}
+              onClick={() => setAddingLocal(true)}
             >
-              Adicionar bot
+              Adicionar jogador local
             </button>
-            <button
-              className="btn"
-              disabled={room.players.length < 2}
-              onClick={() => send({ type: "room:start" })}
-            >
-              Começar
-            </button>
+            {isHost ? (
+              <button
+                className="btn"
+                disabled={room.players.length < 2}
+                onClick={() => send({ type: "room:start" })}
+              >
+                Começar
+              </button>
+            ) : (
+              <p className="waiting">Esperando o host…</p>
+            )}
           </>
         ) : (
           <p className="waiting">Esperando o host…</p>
         )}
       </section>
-      {pendingRemove ? (
-        <ConfirmRemove
-          nick={pendingRemove.nick}
-          onCancel={() => setPendingRemove(null)}
-          onConfirm={() => {
-            send({ type: "room:removePlayer", playerId: pendingRemove.id });
-            setPendingRemove(null);
-          }}
-        />
-      ) : null}
+      <AddLocalSheet
+        open={addingLocal}
+        taken={room.takenColors}
+        onCancel={() => setAddingLocal(false)}
+        onAdd={(nextNick, nextColor) => {
+          void submitAddLocal(nextNick, nextColor);
+        }}
+      />
+      <ConfirmRemove
+        open={Boolean(pendingRemove)}
+        nick={pendingRemove?.nick ?? ""}
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() => {
+          if (!pendingRemove) return;
+          send({ type: "room:removePlayer", playerId: pendingRemove.id });
+          setPendingRemove(null);
+        }}
+      />
       <Toast message={toast} />
       {wsFlag}
     </main>
@@ -878,7 +935,8 @@ function boardGlow({
   deadlineAt: number | null;
   now: number;
 }): "turn" | "orange" | "red" | null {
-  if (status !== "playing" || currentKind !== "human" || !myTurn || !deadlineAt) return null;
+  if (status !== "playing" || !myTurn || !deadlineAt) return null;
+  if (currentKind !== "remote" && currentKind !== "local") return null;
   const left = deadlineAt - now;
   if (left <= 5_000) return "red";
   if (left <= 10_000) return "orange";
@@ -963,24 +1021,87 @@ function EyeIcon() {
   );
 }
 
-function ConfirmRemove({
-  nick,
+function actingPlayerId(room: PublicRoom, playerId: string): string {
+  const currentId = room.game?.playerIds[room.game.currentPlayerIndex];
+  const current = room.players.find((p) => p.id === currentId);
+  if (current?.kind === "local" && current.ownerPlayerId === playerId) return current.id;
+  return playerId;
+}
+
+function canActForCurrent(room: PublicRoom, session: Session | null): boolean {
+  if (!session || room.status !== "playing" || room.game?.status !== "playing") return false;
+  const currentId = room.game.playerIds[room.game.currentPlayerIndex];
+  const current = room.players.find((p) => p.id === currentId);
+  if (!current) return false;
+  return current.id === session.playerId || (current.kind === "local" && current.ownerPlayerId === session.playerId);
+}
+
+function playerSuffix(player: PublicPlayer, hostPlayerId: string): string {
+  if (player.id === hostPlayerId) return " · host";
+  if (player.kind === "bot") return " · bot";
+  if (player.kind === "local") return " · local";
+  return " · remoto";
+}
+
+function canRemovePlayer(room: PublicRoom, session: Session | null, player: PublicPlayer): boolean {
+  if (!session || player.id === session.playerId || player.id === room.hostPlayerId) return false;
+  if (session.playerId === room.hostPlayerId) return true;
+  return player.kind === "local" && player.ownerPlayerId === session.playerId;
+}
+
+function firstFreeColor(taken: ColorId[]): ColorId {
+  return COLOR_IDS.find((id) => !taken.includes(id)) ?? COLOR_IDS[0]!;
+}
+
+function RemoveIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AddLocalSheet({
+  open,
+  taken,
   onCancel,
-  onConfirm,
+  onAdd,
 }: {
-  nick: string;
+  open: boolean;
+  taken: ColorId[];
   onCancel: () => void;
-  onConfirm: () => void;
+  onAdd: (nick: string, color: ColorId) => void;
 }) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
+  const nickRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+  const { present, leaving } = useSheetPresence(open);
+  const [nick, setNick] = useState("");
+  const [color, setColor] = useState<ColorId>(() => firstFreeColor(taken));
+  const canSubmit = isValidNick(nick) && !taken.includes(color);
+
+  const takenRef = useRef(taken);
+  takenRef.current = taken;
 
   useEffect(() => {
-    cancelRef.current?.focus();
+    if (!open) return;
+    setNick("");
+    setColor(firstFreeColor(takenRef.current));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || leaving) return;
+    nickRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCancel();
+        onCancelRef.current();
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -1000,10 +1121,106 @@ function ConfirmRemove({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  }, [open, leaving]);
+
+  if (!present) return null;
 
   return (
-    <div className="sheet-root center">
+    <div className={`sheet-root ${leaving ? "is-out" : "is-in"}`}>
+      <button className="sheet-backdrop" aria-label="Cancelar" onClick={onCancel} />
+      <div
+        ref={panelRef}
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-local-title"
+      >
+        <div className="sheet-head">
+          <h2 id="add-local-title">Jogador local</h2>
+          <button className="icon-btn sheet-close" type="button" onClick={onCancel} aria-label="Fechar">
+            <CloseIcon />
+          </button>
+        </div>
+        <div className="sheet-body">
+          <div className="field">
+            <label htmlFor="local-nick">Nick</label>
+            <input
+              id="local-nick"
+              ref={nickRef}
+              value={nick}
+              maxLength={16}
+              onChange={(e) => setNick(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Cor</label>
+            <ColorPicker value={color} taken={taken} onChange={setColor} />
+          </div>
+          <button
+            className="btn"
+            type="button"
+            disabled={!canSubmit}
+            onClick={() => onAdd(nick.trim(), color)}
+          >
+            Adicionar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmRemove({
+  open,
+  nick,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  nick: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+  const shownNick = useRef(nick);
+  const { present, leaving } = useSheetPresence(open);
+  if (open && nick) shownNick.current = nick;
+
+  useEffect(() => {
+    if (!open || leaving) return;
+    cancelRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancelRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, leaving]);
+
+  if (!present) return null;
+
+  return (
+    <div className={`sheet-root center ${leaving ? "is-out" : "is-in"}`}>
       <button className="sheet-backdrop" aria-label="Cancelar remoção" onClick={onCancel} />
       <div
         ref={panelRef}
@@ -1013,8 +1230,8 @@ function ConfirmRemove({
         aria-labelledby="confirm-remove-title"
         aria-describedby="confirm-remove-copy"
       >
-        <h2 id="confirm-remove-title">Remover {nick}?</h2>
-        <p id="confirm-remove-copy">Tem certeza? {nick} sai da sala.</p>
+        <h2 id="confirm-remove-title">Remover {shownNick.current}?</h2>
+        <p id="confirm-remove-copy">Tem certeza? {shownNick.current} sai da sala.</p>
         <div className="confirm-actions">
           <button ref={cancelRef} className="btn ghost" type="button" onClick={onCancel}>
             Cancelar

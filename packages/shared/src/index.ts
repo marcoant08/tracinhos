@@ -88,7 +88,7 @@ export const BOT_NICKS = [
 ] as const;
 
 export type RoomStatus = "lobby" | "playing" | "finished";
-export type PlayerKind = "human" | "bot";
+export type PlayerKind = "remote" | "local" | "bot";
 
 export type PublicPlayer = {
   id: string;
@@ -96,6 +96,7 @@ export type PublicPlayer = {
   color: ColorId;
   kind: PlayerKind;
   connected: boolean;
+  ownerPlayerId?: string;
 };
 
 export type PublicWatcher = {
@@ -206,6 +207,7 @@ export type ClientMessage =
   | { type: "room:join"; roomCode: string; nick: string; color: ColorId }
   | { type: "room:resume"; roomCode: string; seatToken: string }
   | { type: "room:addBot" }
+  | { type: "room:addLocal"; nick: string; color: ColorId }
   | { type: "room:removeBot"; playerId: string }
   | { type: "room:removePlayer"; playerId: string }
   | { type: "room:setStarter"; playerId: string | null }

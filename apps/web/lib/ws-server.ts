@@ -8,6 +8,7 @@ import {
 import { RoomError } from "./errors";
 import {
   addBot,
+  addLocal,
   drawEdge,
   removeBot,
   joinRoom,
@@ -163,6 +164,12 @@ export function bindSocket(socket: SocketLike) {
 
       if (message.type === "room:addBot") {
         const room = await addBot(binding.roomCode, binding.playerId);
+        send(socket, { type: "game:state", room });
+        return;
+      }
+
+      if (message.type === "room:addLocal") {
+        const room = await addLocal(binding.roomCode, binding.playerId, message.nick, message.color);
         send(socket, { type: "game:state", room });
         return;
       }

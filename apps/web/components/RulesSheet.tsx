@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CloseIcon } from "./CloseIcon";
 import { RulesContent } from "./RulesContent";
+import { useSheetPresence } from "@/lib/use-sheet-presence";
 
 export function RulesSheet({
   open,
@@ -12,9 +14,10 @@ export function RulesSheet({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const { present, leaving } = useSheetPresence(open);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || leaving) return;
     closeRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -39,12 +42,12 @@ export function RulesSheet({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, leaving, onClose]);
 
-  if (!open) return null;
+  if (!present) return null;
 
   return (
-    <div className="sheet-root">
+    <div className={`sheet-root ${leaving ? "is-out" : "is-in"}`}>
       <button className="sheet-backdrop" aria-label="Fechar regras" onClick={onClose} />
       <div
         ref={panelRef}
@@ -55,8 +58,8 @@ export function RulesSheet({
       >
         <div className="sheet-head">
           <h2 id="rules-sheet-title">Regras</h2>
-          <button ref={closeRef} className="icon-btn" type="button" onClick={onClose} aria-label="Fechar">
-            ×
+          <button ref={closeRef} className="icon-btn sheet-close" type="button" onClick={onClose} aria-label="Fechar">
+            <CloseIcon />
           </button>
         </div>
         <div className="sheet-body">

@@ -9,6 +9,7 @@ import {
 } from "./presence";
 import {
   actorFromToken,
+  addLocal,
   createRoom,
   drawEdge,
   getPublicRoom,
@@ -98,6 +99,16 @@ export async function handleRest(
           header(req, "x-watch-token"),
         ),
       );
+    }
+
+    const localMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/local$/);
+    if (req.method === "POST" && localMatch) {
+      const body = await readJson(req);
+      const code = decodeURIComponent(localMatch[1]);
+      const playerId = await actorFromToken(code, asString(body.seatToken));
+      return send(res, 200, {
+        room: await addLocal(code, playerId, asString(body.nick), asString(body.color)),
+      });
     }
 
     const joinMatch = pathname.match(/^\/api\/rooms\/([^/]+)\/join$/);
