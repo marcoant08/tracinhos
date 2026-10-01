@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Anton, Sora } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SiteHeader />
         {children}
+        <Analytics />
       </body>
     </html>
   );

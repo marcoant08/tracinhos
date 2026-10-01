@@ -253,9 +253,7 @@ input::placeholder {
 }
 
 .select-size {
-  min-height: 56px;
-  font-size: 1.15rem;
-  font-weight: 700;
+  min-height: 48px;
 }
 
 .btn {

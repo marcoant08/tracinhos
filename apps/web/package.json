@@ -11,6 +11,7 @@
     "@tracinhos/game": "*",
     "@tracinhos/shared": "*",
     "@upstash/redis": "^1.35.6",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.1.4",
     "next": "^15.5.4",
     "react": "^19.1.1",

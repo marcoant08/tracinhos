@@ -37,7 +37,7 @@ const GRID_OPTIONS = [
   {
     cols: TALL_GRID.cols,
     rows: TALL_GRID.rows,
-    label: "10×15 pontos (126 quadrados)",
+    label: "10×15 (126 quadrados)",
   },
 ];
 
